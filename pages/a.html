@@ -51,9 +51,10 @@
 
 
 	#########################################################################################################################
+	
 	<code>
-	#include <stdio.h>
-	#include <intrin.h>
+	#include &lt;stdio.h>
+	#include &lt;intrin.h>
 	#pragma intrinsic(_ReturnAddress)
 	
 	void returnval(void)
@@ -92,21 +93,19 @@
 	Status = LdrGetProcedureAddress(ModuleHandle, &ProcedureNameString, (ULONG)NULL, (PVOID*)&ProcedurePointer);
 	
 	void* VirtualAllocPointer = ProcedurePointer;
+	
 	/* 
 	fnVirtualAlloc is just a custom function prototype typedef which can be applied to the pointer to 
 	setup according to calling conv
 	*/
-	/*
-	/* START VirtualAlloc */
+	
 	typedef LPVOID(NTAPI * fnVirtualAlloc)(
 		/* [in, optional]*/ LPVOID lpAddress,
 		/* [in]          */ SIZE_T dwSize,
 		/* [in]          */ DWORD  flAllocationType,
 		/* [in]          */ DWORD  flProtect
 	);
-
 	*/
-	
 	
 	OrigVirtualAlloc = (fnVirtualAlloc)VirtualAllocPointer;
 	</code>
@@ -116,8 +115,8 @@
 	#########################################################################################################################
 	<code>
 	#define WIN32_LEAN_AND_MEAN
-	#include <cstdio>
-	#include <Windows.h>
+	#include &lt;cstdio>
+	#include &lt;Windows.h>
 	
 	void main(void) {
 		printf("%-20s : 0x%-016p\n", "Original:", (void*)VirtualAlloc);
@@ -192,9 +191,9 @@
 	
 	#########################################################################################################################
 	<code>
-	#include <stdio.h>
-	#include <Windows.h>
-	#include <winternl.h>
+	#include &lt;stdio.h>
+	#include &lt;Windows.h>
+	#include &lt;winternl.h>
 	
 	void main(void)
 	{
@@ -359,8 +358,8 @@
 	
 	#########################################################################################################################
 	<code>
-	#include <Windows.h>
-	#include <stdio.h>
+	#include &lt;Windows.h>
+	#include &lt;stdio.h>
 	//#pragma comment(lib, "kernel32.lib") /* uncomment to catch kernel32.dll:CreateThread() */
 	
 	#if _DEBUG
