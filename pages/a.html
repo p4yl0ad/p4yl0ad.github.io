@@ -129,7 +129,8 @@
 	LIST_ENTRY InMemoryOrderModuleList;
 	} PEB_LDR_DATA, *PPEB_LDR_DATA;
 	
-	// NOTE: If you dont know what a LIST_ENTRY structure is , learn it, its everywhere in windows and very easy to understand
+	// NOTE: If you dont know what a LIST_ENTRY structure is , learn it, its everywhere in windows 
+	// and is very easy to understand
 	
 	typedef struct _LDR_DATA_TABLE_ENTRY {
 		PVOID Reserved1[2];
@@ -294,9 +295,13 @@
 		if from malproc64.exe:
 			HOOKHIT:WIN32:HookVirtualAlloc, (caller module:malproc64.exe),
 		else:
-			(c) ReturnAddress() value 0x00007FF62F1C11A2 is passed to RtlLookupFunctionEntry which returns a PRUNTIME FUNCTION for the caller
-			(d) PRUNTIME FUNCTION.BeginAddress used to parse PE and get function name of calling BeginAddress as it will equal baseaddress + VirtualAlloc RVA of the function
-			(e) HOOKHIT:NTAPI:HookNtAllocateVirtualMemory, (caller module:KERNELBASE.dll:VirtualAlloc),(func:0x00007FFBF4D718E8)
+			(c) ReturnAddress() value 0x00007FF62F1C11A2 is passed to RtlLookupFunctionEntry which returns a PRUNTIME FUNCTION 
+			for the caller
+			(d) PRUNTIME FUNCTION.BeginAddress used to parse PE and get function name of calling BeginAddress as it will equal 
+			baseaddress + VirtualAlloc RVA of the function
+			(e) HOOKHIT:NTAPI:HookNtAllocateVirtualMemory, 
+				(caller module:KERNELBASE.dll:VirtualAlloc),
+				(func:0x00007FFBF4D718E8)
 			
 			
 	
@@ -519,6 +524,8 @@
 	a case of attaching a debugger and stepping through until NTSTATUS values returned 0x00000000.
 	
 
+	#########################################################################################################################
+	
 	/*[...SNIP...]*/
 	/* AppendLogFile function which takes a pointer to an array of chars and a length of
 	chars to read from char array↪→
@@ -565,6 +572,8 @@
 	/* SNIP */
 	NtClose(FileHand);
 	/*[...SNIP...]*/
+	
+	#########################################################################################################################
 
 
 ## [0.9] Future Developments/Research
