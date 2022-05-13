@@ -39,7 +39,8 @@
 	
 	void returnval(void)
 	{
-		printf("Return Address: 0x%p\n", (void*)_ReturnAddress()); /* the value printed will be within the main function */
+		/* the value printed will be within the main function */
+		printf("Return Address: 0x%p\n", (void*)_ReturnAddress()); 
 	}
 	
 	void main(void)
@@ -59,8 +60,8 @@
 	dynamically which can be utilized from Win32 to obtain function pointers; however this needs to use Win32.
 	
 	The method that was discovered was using the Ldr functions exported by NTDLL.DLL to copy the functionality of 
-	LoadLibrary + GetProcAddress. LdrLoadDll and LdrGetProcedureAddress were utilized with the function prototypes provided by 
-	process hackers NT headers.
+	LoadLibrary + GetProcAddress. LdrLoadDll and LdrGetProcedureAddress were utilized with the function prototypes 
+	provided by process hackers NT headers.
 	
 	
 	#########################################################################################################################
@@ -136,10 +137,10 @@
 		PVOID Reserved1[2];
 		LIST_ENTRY InMemoryOrderLinks;
 		PVOID Reserved2[2];
-		PVOID DllBase;										// THIS IS WHAT WE WANT
-		PVOID EntryPoint;									// THIS IS WHAT WE WANT
+		PVOID DllBase;						// THIS IS WHAT WE WANT
+		PVOID EntryPoint;					// THIS IS WHAT WE WANT
 		PVOID Reserved3;
-		UNICODE_STRING FullDllName;  						// THIS IS WHAT WE WANT
+		UNICODE_STRING FullDllName;			// THIS IS WHAT WE WANT
 		BYTE Reserved4[8];
 		PVOID Reserved5[3];
 		union {
@@ -171,10 +172,18 @@
 		for (list_entry = list_head->Flink; list_entry != list_head; list_entry = list_entry->Flink) 
 		{
 			ldr_entry = (LDR_DATA_TABLE_ENTRY_COMPLETED*)((char*)list_entry - sizeof(LIST_ENTRY));
-			printf("DLL Name %ws\n", ldr_entry->BaseDllName.Buffer);
-			printf("Base Address 0x%p\n", (void *)ldr_entry->DllBase);
-			printf("SizeOfImage 0x%p\n", (void *)ldr_entry->SizeOfImage);
-			printf("End Address 0x%p\n\n", (void*)((ULONGLONG)ldr_entry->DllBase+(ULONGLONG)ldr_entry->SizeOfImage));↪→
+			
+			printf("DLL Name %ws\n", 
+			ldr_entry->BaseDllName.Buffer);
+			
+			printf("Base Address 0x%p\n", 
+			(void *)ldr_entry->DllBase);
+			
+			printf("SizeOfImage 0x%p\n", 
+			(void *)ldr_entry->SizeOfImage);
+			
+			printf("End Address 0x%p\n\n", 
+			(void*)((ULONGLONG)ldr_entry->DllBase+(ULONGLONG)ldr_entry->SizeOfImage));
 		}
 	}
 	
@@ -295,10 +304,10 @@
 		if from malproc64.exe:
 			HOOKHIT:WIN32:HookVirtualAlloc, (caller module:malproc64.exe),
 		else:
-			(c) ReturnAddress() value 0x00007FF62F1C11A2 is passed to RtlLookupFunctionEntry which returns a PRUNTIME FUNCTION 
-			for the caller
-			(d) PRUNTIME FUNCTION.BeginAddress used to parse PE and get function name of calling BeginAddress as it will equal 
-			baseaddress + VirtualAlloc RVA of the function
+			(c) ReturnAddress() value 0x00007FF62F1C11A2 is passed to RtlLookupFunctionEntry which returns a 
+			PRUNTIME FUNCTION for the caller
+			(d) PRUNTIME FUNCTION.BeginAddress used to parse PE and get function name of calling BeginAddress as it 
+			will equal baseaddress + VirtualAlloc RVA of the function
 			(e) HOOKHIT:NTAPI:HookNtAllocateVirtualMemory, 
 				(caller module:KERNELBASE.dll:VirtualAlloc),
 				(func:0x00007FFBF4D718E8)
@@ -326,7 +335,7 @@
 	void main(void)
 	{
 		DWORD oldprotect = 0;
-		unsigned char payload[] = {0x90,0x90,0x90,0x90,0x90,0x90,0xc3,0xcc}; 					// 6xnop sled, int3, ret
+		unsigned char payload[] = {0x90,0x90,0x90,0x90,0x90,0x90,0xc3,0xcc}; 		// 6xnop sled, int3, ret
 		unsigned int payload_len = 10;
 		HMODULE SampleHookDllModule = LoadLibrary(DLL_PATH);
 		HANDLE cp = GetCurrentProcess();
