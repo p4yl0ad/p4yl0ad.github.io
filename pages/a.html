@@ -11,6 +11,25 @@
 ██░████─█─█─█─██─▄─█─██─█████─███─▄─██─▄█▀████─▄█████─███▀██─▀─███─██▀██─██▀██─▄█▀██─██─████─█▄█─███─▄█▀███▄██
 ▀▄▄▄▀▀▀▄▄▄▀▄▄▄▀▀▄▀▄▀▄▄▄▄▀▀▀▀▄▄▄▀▀▄▀▄▀▄▄▄▄▄▀▀▀▄▄▄▀▀▀▀▀▄▄▄▄▄▀▄▄▀▄▄▀▄▄▄▄▄▀▄▄▄▄▄▀▄▄▄▄▄▀▄▄▄▄▀▀▀▀▄▄▄▀▄▄▄▀▄▄▄▄▄▀▀▀▄▀▀
 
+
+
+## Contents [x.x]
+	[0.0] Finding the callers module name and function name ( NTAPI / WIN32 )
+	[0.1] Scenario
+	[0.2] RIP/return address & __ReturnAddress()
+	[0.3] Hooking Win32 from a NTAPI dependant dll?
+	[0.4] What module called
+	[0.5] What function called
+	[0.6] Putting the pieces together
+	[0.7] Bypassing detection
+	[0.8] Critical Review
+	[0.9] Revisions
+	[1.0] Future Developments/Research
+	[1.1] Reference Dump (LaTeX references.bib)
+
+
+
+
 ## [0.0] Finding the callers module name and function name ( NTAPI / WIN32 )
 	NOTE: This was research that was done for a University BSc Cyber Security and Digital Forensics dissertation, 
 	this project was chosen as a challenge as my windows OS knowledge was weak. Didnt know more than how to write 
@@ -24,7 +43,7 @@
 	inspired by Dennis Babkin(InjectAll), wbenny(InjDrv/DetoursNT), ccob(Building And Breaking an edr) and the 
 	blogs read along the way.
 
-## [0.2] RIP/return address
+## [0.2] RIP/return address & __ReturnAddress()
 	To obtain the target address to search for, the MSVC compiler intrinsic __ReturnAddress() can be used within
 	each hooking function. Take the example below, the entry function calls the returnval function which utilizes
 	this intrinsic and prints the address which a RET instruction will return to. In this case pointing back
@@ -305,7 +324,7 @@
 	being searched and if it’s not it’s likely a private function or pointing back into the host executable.
 
 
-## [0.5] Putting the pieces together
+## [0.6] Putting the pieces together
 	The complete functionality of a Call to a hooked function can be described below. After The DLL has been
 	injected into malproc64.exe and Hooks have been applied.
 	
@@ -426,7 +445,7 @@
 
 
 
-## [0.6] Bypassing detection
+## [0.7] Bypassing detection
 	
 	
 	#########################################################################################################################
@@ -520,7 +539,7 @@
 		6. The breakpoint set on CreateProcessInternalW which is called by the msfvenom shellcode is hit
 
 
-## [0.7] Critical Review
+## [0.8] Critical Review
 	At the beginning of the project the researcher had the aim of developing a Kernel Driver which can inject a
 	custom DLL into processes and act as a provider and protector from malicious API usage patterns. This was
 	inspired by an interest in how enterprise endpoint detection implement their user mode detection capabilities.
@@ -535,7 +554,7 @@
 	this allowed the researcher to dive deep and learn a good deal of Windows internals fundamentals.
 
 
-## [0.8] Revisions
+## [0.9] Revisions
 	The c code that was written is not safe by any means, warning messages and memory safety were not taken
 	into account during the lifecycle of programming due to inexperience. A couple of rounds of Refactoring
 	and code review will enable the application to be safer and made more efficient in terms of operation and
@@ -646,7 +665,7 @@
 	#########################################################################################################################
 
 
-## [0.9] Future Developments/Research
+## [1.0] Future Developments/Research
 	For further research more of the Windows internals functionality would like to be uncovered and experimented
 	with and as a result part 2 of the Windows Internals Microsoft Press series (Russinovich and A. A. 2019)
 	will be acquired and read.
@@ -676,12 +695,8 @@
 	Overall the project enabled the researcher to perform a range of experiments within windows with the
 	purpose of expanding knowledge and experience.
 	
-	
-	
 
-
-
-	## [1.0] Reference Dump (LaTeX references.bib)
+## [1.1] Reference Dump (LaTeX references.bib)
 
 	@BOOK{WI,
 		author = "Yosifovich P. Ionescu A. Russinovich E M. and Solomon A D.",
