@@ -56,7 +56,7 @@
 ## [0.3] Hooking Win32 from a NTAPI dependant dll?
 	Hooking the Win32 API and the NTAPI with Microsoft Detours is trivial. Hooking Win32 from DetoursNT
 	was not as easy. To use DetoursNT as a hooking library in our situation to hook Win32 functions, 
-	a pointer to the entry point of the function to be hooked needed to be obtained in order to apply the detour. 
+	a pointer to the entry point of the function to be hooked is needed to be obtained in order to apply the detour. 
 	This can be carried out in a similar way to the LoadLibrary + GetProcAddress method used to resolve functions 
 	dynamically which can be utilized from Win32 to obtain function pointers; however this needs to use Win32.
 	
@@ -74,6 +74,22 @@
 	Status = LdrGetProcedureAddress(ModuleHandle, &ProcedureNameString, (ULONG)NULL, (PVOID*)&ProcedurePointer);
 	
 	void* VirtualAllocPointer = ProcedurePointer;
+	/* 
+	fnVirtualAlloc is just a custom function prototype typedef which can be applied to the pointer to 
+	setup according to calling conv
+	*/
+	/*
+	/* START VirtualAlloc */
+	typedef LPVOID(NTAPI * fnVirtualAlloc)(
+		/* [in, optional]*/ LPVOID lpAddress,
+		/* [in]          */ SIZE_T dwSize,
+		/* [in]          */ DWORD  flAllocationType,
+		/* [in]          */ DWORD  flProtect
+	);
+
+	*/
+	
+	
 	OrigVirtualAlloc = (fnVirtualAlloc)VirtualAllocPointer;
 	
 	#########################################################################################################################
@@ -126,12 +142,13 @@
 	
 	/* _PEB_LDR_DATA Member of the PEB structure */
 	typedef struct _PEB_LDR_DATA {
-	BYTE       Reserved1[8];
-	PVOID      Reserved2[3];
-	LIST_ENTRY InMemoryOrderModuleList;
+		BYTE       Reserved1[8];
+		PVOID      Reserved2[3];
+		LIST_ENTRY InMemoryOrderModuleList;
 	} PEB_LDR_DATA, *PPEB_LDR_DATA;
 	
-	/* NOTE: If you dont know what a LIST_ENTRY structure is , learn it, its everywhere in windows 
+	/* 
+	* NOTE: If you dont know what a LIST_ENTRY structure is , learn it, its everywhere in windows 
 	* and is very easy to understand 
 	*/
 	
@@ -367,6 +384,46 @@
 	(HOOKDLL\_YN:CALLERMODULE:CALLINGFUNCTION),\\
 	(COUNT(Will be Depreciated)), \\
 	(RETADDRESS)
+
+
+	Each api call trace is split into groups of loglines with descriptions in the form of inline c comments.
+	
+	#########################################################################################################################
+	
+	/** Normal VirtualAlloc call (VirtualAlloc->[Zw/Nt]AllocateVirtualMemory) **/
+	/* UnknownCaller calls VirtualAlloc which hits HookVirtualAlloc */
+	HOOKHIT: WIN32:HookVirtualAlloc,(caller module: NOT_OG:malproc6464d.exe:UnknownCaller),	
+	(count : 1),(func : 0x00007FF6CC4920E8)
+	/* HookNtAllocateVirtualMemory gets called by KERNELBASE.dll:VirtualAlloc */
+	HOOKHIT: NTAPI:HookNtAllocateVirtualMemory,(caller module: NOT_OG:KERNELBASE.dll:VirtualAlloc),
+	(count : 1),(func : 0x00007FFF650218E8)
+	
+	/** Normal VirtualAllocEx call (VirtualAllocEx->VirtualAllocExNuma->[Zw/Nt]AllocateVirtualMemory) **/
+	/* UnknownCaller calls HookVirtualAllocEx which hits HookVirtualAllocExNuma */
+	HOOKHIT: WIN32:HookVirtualAllocEx,(caller module: NOT_OG:malproc6464d.exe:UnknownCaller),
+	(count : 1),(func : 0x00007FF6CC49210F)
+	/* HookVirtualAllocExNuma gets called by KERNELBASE.dll:VirtualAllocEx */
+	HOOKHIT: WIN32:HookVirtualAllocExNuma,(caller module: NOT_OG:KERNELBASE.dll:VirtualAllocEx),
+	(count : 1),(func : 0x00007FFF650351E6)
+	/* HookNtAllocateVirtualMemory gets called by KERNELBASE.dll:VirtualAllocExNuma */
+	HOOKHIT: NTAPI:HookNtAllocateVirtualMemory,(caller module: NOT_OG:KERNELBASE.dll:VirtualAllocExNuma),
+	(count : 1),(func : 0x00007FFF6503524D)
+	
+	/** Normal HookVirtualAllocExNuma call (VirtualAllocExNuma->[Zw/Nt]AllocateVirtualMemory) **/
+	/* UnknownCaller calls HookVirtualAllocExNuma which hits HookNtAllocateVirtualMemory */
+	HOOKHIT: WIN32:HookVirtualAllocExNuma,	(caller module: NOT_OG:malproc6464d.exe:UnknownCaller),	
+	(count : 1),	(func : 0x00007FF6CC49213E)
+	/* HookNtAllocateVirtualMemory gets called by KERNELBASE.dll:VirtualAllocExNuma */
+	HOOKHIT: NTAPI:HookNtAllocateVirtualMemory,	(caller module: NOT_OG:KERNELBASE.dll:VirtualAllocExNuma),	
+	(count : 1),	(func : 0x00007FFF6503524D)
+	
+	#########################################################################################################################
+
+
+	Its not nice on the eyes and was the source for some confusion, but thats the learning process.
+	
+	Make mistakes while experiementing and researching -> learn from it -> apply in the real world
+
 
 
 ## [0.6] Bypassing detection
