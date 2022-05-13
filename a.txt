@@ -1,0 +1,86 @@
+## [0.0] Finding the callers module and function name ( NTAPI / WIN32 )
+
+## [0.1] Scenario
+Win32 & CRT-less binary intended to early load by e.g. ELAM/KMDF driver using KAPC injection to force load.
+
+## [0.1] RIP/return address
+To obtain the target address to search for, the MSVC compiler intrinsic ReturnAddress() can be used within
+each hooking function. Take the example below, the entry function calls the returnval function which utilizes
+this intrinsic and prints the address which a return instruction will return to. In this case pointing back
+within the main function, The instruction after the function call to be specific as shown in the annotated
+IDA screenshot. This logic will be valuable in a later section.
+
+
+#########################################################################################################################
+
+#include <stdio.h>
+#include <intrin.h>
+#pragma intrinsic(_ReturnAddress)
+
+void returnval(void)
+{
+	printf("Return Address: 0x%p\n", (void*)_ReturnAddress()); /* the value printed will be within the main function */
+}
+
+void main(void)
+{
+	returnval(); /* the function call */
+	/* <- here is where the program will logically return to after executing the function returnval() */
+}
+
+#########################################################################################################################
+
+
+Hooking the Win32 API and the NTAPI with Microsoft Detours is trivial. Hooking Win32 from DetoursNT
+was not as easy. To use DetoursNT as a hooking library in a NTAPI sole dependant DLL to hook Win32
+functions, a pointer to the entry point of the function needs to be obtained in order to apply the hook. This
+can be carried out in a similar way to the LoadLibrary + GetProcAddress method which can be utilized
+from Win32 to obtain function pointers; however this needs to use the NTAPI.
+
+The method that was discovered was using the Ldr functions exported by NTDLL.DLL to copy the func-
+tionality of LoadLibrary + GetProcAddress. LdrLoadDll and LdrGetProcedureAddress were utilized with
+the function prototypes provided by process hackers NT headers
+
+
+Easily get Win32 function pointers using NTAPI:
+
+#########################################################################################################################
+
+RtlInitUnicodeString(&ModuleNameString_U, L"kernelbase");
+Status = LdrLoadDll(UNICODE_NULL, NULL, &ModuleNameString_U, &ModuleHandle);
+
+RtlInitString(&ProcedureNameString, "VirtualAlloc");
+Status = LdrGetProcedureAddress(ModuleHandle, &ProcedureNameString, (ULONG)NULL, (PVOID*)&ProcedurePointer);
+
+void* VirtualAllocPointer = ProcedurePointer;
+OrigVirtualAlloc = (fnVirtualAlloc)VirtualAllocPointer;
+
+#########################################################################################################################
+
+
+
+
+Can hook functions while not having Win32 in IAT :
+
+#########################################################################################################################
+
+#define WIN32_LEAN_AND_MEAN
+#include <cstdio>
+#include <Windows.h>
+
+void main(void) {
+	printf("%-20s : 0x%-016p\n", "Original:", (void*)VirtualAlloc);
+	HMODULE SampleHookDllModule = LoadLibrary(TEXT("SampleHookDLL.dll"));
+	printf("%-20s : 0x%-016p\n", "Hook:", (void*)VirtualAlloc);
+	void* exec_mem = VirtualAlloc(0, 69, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	FreeLibrary(SampleHookDllModule);
+	printf("%-20s : 0x%-016p\n\nDONE\n", "Unhook:", (void*)VirtualAlloc);
+}
+
+#########################################################################################################################
+
+
+
+
+
+x.x Finding the caller module name
