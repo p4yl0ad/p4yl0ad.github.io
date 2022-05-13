@@ -51,7 +51,7 @@
 
 
 	#########################################################################################################################
-	
+	<code>
 	#include <stdio.h>
 	#include <intrin.h>
 	#pragma intrinsic(_ReturnAddress)
@@ -67,7 +67,7 @@
 		returnval(); /* the function call */
 		/* <- here is where the program will logically return to after executing the function returnval() */
 	}
-	
+	</code>
 	#########################################################################################################################
 
 
@@ -84,7 +84,7 @@
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	RtlInitUnicodeString(&ModuleNameString_U, L"kernelbase");
 	Status = LdrLoadDll(UNICODE_NULL, NULL, &ModuleNameString_U, &ModuleHandle);
 	
@@ -109,12 +109,12 @@
 	
 	
 	OrigVirtualAlloc = (fnVirtualAlloc)VirtualAllocPointer;
-	
+	</code>
 	#########################################################################################################################
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	#define WIN32_LEAN_AND_MEAN
 	#include <cstdio>
 	#include <Windows.h>
@@ -127,7 +127,7 @@
 		FreeLibrary(SampleHookDllModule);
 		printf("%-20s : 0x%-016p\n\nDONE\n", "Unhook:", (void*)VirtualAlloc);
 	}
-	
+	</code>
 	#########################################################################################################################
 
 
@@ -143,7 +143,7 @@
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	/* PEB structure */
 	typedef struct _PEB {
 		BYTE Reserved1[2];
@@ -186,12 +186,12 @@
 		};
 		ULONG TimeDateStamp;
 	} LDR_DATA_TABLE_ENTRY, *PLDR_DATA_TABLE_ENTRY;
-	
+	</code>
 	#########################################################################################################################
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	#include <stdio.h>
 	#include <Windows.h>
 	#include <winternl.h>
@@ -223,7 +223,7 @@
 			(void*)((ULONGLONG)ldr_entry->DllBase+(ULONGLONG)ldr_entry->SizeOfImage));
 		}
 	}
-	
+	</code>
 	#########################################################################################################################
 
 
@@ -242,7 +242,7 @@
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	typedef struct _IMAGE_RUNTIME_FUNCTION_ENTRY {
 		DWORD BeginAddress; /* Interested in this */
 		DWORD EndAddress;
@@ -253,7 +253,7 @@
 	} _IMAGE_RUNTIME_FUNCTION_ENTRY, *_PIMAGE_RUNTIME_FUNCTION_ENTRY;
 	
 	typedef struct _IMAGE_RUNTIME_FUNCTION_ENTRY RUNTIME_FUNCTION, *PRUNTIME_FUNCTION;
-	
+	</code>
 	#########################################################################################################################
 	
 	
@@ -262,7 +262,7 @@
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	EXTERN_C NTSYSAPI PRUNTIME_FUNCTION NTAPI RtlLookupFunctionEntry(
 	/* [in] */ DWORD64 ControlPc,
 	/* [out] */ PDWORD64 ImageBase,
@@ -270,7 +270,7 @@
 	);
 	[...SNIP...]
 	runfunc = RtlLookupFunctionEntry(ullRetAddr, &imgbase, &HistTable);
-	
+	</code>
 	#########################################################################################################################
 	
 	
@@ -289,7 +289,7 @@
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	[...SNIP...]
 	if ((PIMAGE_DOS_HEADER)imgbase)->e_magic == IMAGE_DOS_SIGNATURE)
 	{
@@ -315,7 +315,7 @@
 	[...SNIP...]
 	}
 	[...SNIP...]
-	
+	</code>
 	#########################################################################################################################
 	
 	
@@ -358,7 +358,7 @@
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	#include <Windows.h>
 	#include <stdio.h>
 	//#pragma comment(lib, "kernel32.lib") /* uncomment to catch kernel32.dll:CreateThread() */
@@ -390,7 +390,7 @@
 		HANDLE th = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)exec_mem, 0, 0, 0);
 		WaitForSingleObject(th, -1);
 	}
-	
+	</code>
 	#########################################################################################################################
 	
 	
@@ -490,7 +490,7 @@
 	
 	
 	#########################################################################################################################
-	
+	<code>
 	#include "syscall.h"
 	void ThisIsNotAnEntryPoint(void)
 	{
@@ -521,7 +521,7 @@
 		//WaitForSingleObject(th, -1); 	// to actually wait infinitely we need to link with kernel32, 
 										// or be bothered to use ntapi equiv
 	}
-	
+	</code>
 	#########################################################################################################################
 	
 	
@@ -561,6 +561,9 @@
 	Using Nt NTAPI functions for file creation and management was difficult due to the lack of official docu-
 	mentation and inexperience but it was made to work through attaching a debugger and trial and error. 
 	
+	
+	#########################################################################################################################
+	<code>
 	[...SNIP...]
 	/* CreateLogFile function which grabs PID and exe name and creates a log file in the
 	format
@@ -603,7 +606,7 @@
 		/* close handle so that other write operations are possible */
 		NtClose(LogFileHandle);
 	}
-	
+	</code>
 	#########################################################################################################################
 	
 	
@@ -613,7 +616,7 @@
 	
 
 	#########################################################################################################################
-	
+	<code>
 	/*[...SNIP...]*/
 	/* AppendLogFile function which takes a pointer to an array of chars and a length of
 	chars to read from char array
@@ -660,7 +663,7 @@
 	/* SNIP */
 	NtClose(FileHand);
 	/*[...SNIP...]*/
-	
+	</code>
 	#########################################################################################################################
 
 
