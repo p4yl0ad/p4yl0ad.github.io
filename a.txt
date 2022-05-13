@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>text dump</title>
+</head>
+<body>
+	
 ███████████████████████████████████████████████████████████████████████████
 █─▄─▄─█─█─█▄─▄▄─███▄─▄███─▄▄─█─▄▄▄▄█─▄─▄─███▄─▀█▄─▄█─▄▄─█─▄─▄─█▄─▄▄─█─▄▄▄▄█
 ███─███─▄─██─▄█▀████─██▀█─██─█▄▄▄▄─███─██████─█▄▀─██─██─███─████─▄█▀█▄▄▄▄─█
@@ -597,3 +604,8 @@ A single page dump of things.
 	realtime messages to be provided (Microsoft 2021c).
 	Overall the project enabled the researcher to perform a range of experiments within windows with the
 	purpose of expanding knowledge and experience.
+	
+	
+
+</body>
+</html>
