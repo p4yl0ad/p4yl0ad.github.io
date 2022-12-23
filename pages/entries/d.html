@@ -18,8 +18,8 @@
 
 
 ## Contents [CNTS]
-	[0.0] Spawn
-	[0.1] Detecting 3.3v, Ground, TX and RX pins.
+    [0.0] Spawn
+    [0.1] Detecting 3.3v, Ground, TX and RX pins.
     [0.2] Setup of raspberry pi as serial (UART) console
     [0.3] Nada
     [0.4] Password....
@@ -54,20 +54,19 @@
     - GPIO14 = TXD
     - GPIO15 = RXD
 
-    (https://cdn.sparkfun.com/assets/learn_tutorials/1/5/9/5/GPIO.png)
+    (GPIO Pin layout[0])
 
 
     Below is a basic diagram of the raspberry pi acting in place of a UART <-> USB dongle.
 
-
-                                +---------+
-                                |         |
-                                | raspi   |
-                                | 3B      |
-                                | 4GB     |
-                                |         |
-                                |  6 t8 10 |
-                                +^-^-^--^-+
+                                +----------+
+                                |          |
+                                | raspi    |
+                                | 3B       |
+                                | 4GB      |
+                                |          |
+                                |  6 10  8 |
+                                +^-^-^--^--+
                                 | | |  |
                                 | | |  |
     +---------------------------+-+-+--+
@@ -87,6 +86,12 @@
     |                                  |
     +----------------------------------+
 
+    Note:
+    ============
+    TX <-> RXD
+    RX <-> TXD
+    ground <-> ground
+
 
 ## [0.3] Nada
     Upon SSHing into the rpi, using the following command had no output.
@@ -104,7 +109,7 @@
     ```
     -> Interfacing options -> Serial -> No to login shell to be accessible over Serial -> Yes to Serial port hardware being enabled
 
-    (https://www.electronicwings.com/raspberry-pi/raspberry-pi-uart-communication-using-python-and-c)
+    (Raspberry pi UART communication[1])
 
 
 ## [0.4] Password....
@@ -116,7 +121,7 @@
     ```
 
     I didn't know the password. Doing some google fu I found a russian blog reviewing this exact router.
-    ( https://www.foxnetwork.ru/index.php/36-reviews/reviews/221-asus-rt-ac1200g )
+    (ASUS rt ac1200 review[2])
 
     """
     Для доступа к командной строке используются та же пара логин-пароль, что и для доступа к веб-интерфейсу маршрутизатора. 
@@ -138,14 +143,15 @@
 
     Trying that combination on the UART granted a successful login as the admin user.
 
+    
+    Part 2, enumeration, exfil and analysis....
 
 
 ## [0.x] References / Resources
+    [0] https://cdn.sparkfun.com/assets/learn_tutorials/1/5/9/5/GPIO.png
+    [1] https://www.electronicwings.com/raspberry-pi/raspberry-pi-uart-communication-using-python-and-c
+    [2] https://www.foxnetwork.ru/index.php/36-reviews/reviews/221-asus-rt-ac1200g 
     
-    
-
-
-
 
 </body>
 </html>
