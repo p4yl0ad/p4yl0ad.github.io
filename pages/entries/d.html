@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- https://fsymbols.com/text-art/ -->
+    <title>Rooting a router via UART</title>
+</head>
+<body>
+<pre>
+
+███████████████████████████████████████▀███████████████████████████████████████████████
+█▄─▄▄▀█─▄▄─█─▄▄─█─▄─▄─█▄─▄█▄─▀█▄─▄█─▄▄▄▄████▀▄─████▄─▄▄▀█─▄▄─█▄─██─▄█─▄─▄─█▄─▄▄─█▄─▄▄▀█
+██─▄─▄█─██─█─██─███─████─███─█▄▀─██─██▄─████─▀─█████─▄─▄█─██─██─██─████─████─▄█▀██─▄─▄█
+▀▄▄▀▄▄▀▄▄▄▄▀▄▄▄▄▀▀▄▄▄▀▀▄▄▄▀▄▄▄▀▀▄▄▀▄▄▄▄▄▀▀▀▄▄▀▄▄▀▀▀▄▄▀▄▄▀▄▄▄▄▀▀▄▄▄▄▀▀▀▄▄▄▀▀▄▄▄▄▄▀▄▄▀▄▄▀
+████████████████████████████████
+█▀▄█▄─██─▄██▀▄─██▄─▄▄▀█─▄─▄─█▄▀█
+█░███─██─███─▀─███─▄─▄███─████░█
+▀▀▄▀▀▄▄▄▄▀▀▄▄▀▄▄▀▄▄▀▄▄▀▀▄▄▄▀▀▄█▀
+
+
+## Contents [CNTS]
+	[0.0] Spawn
+	[0.1] Detecting 3.3v, Ground, TX and RX pins.
+    [0.2] Setup of raspberry pi as serial (UART) console
+    [0.3] Nada
+    [0.4] Password....
+    [0.4] 
+
+
+## [0.0] Spawn
+    Had a ASUS RT-AC1200G+ router that was doing nothing, had been watching Flashback team (https://www.youtube.com/@FlashbackTeam/videos) videos on youtube and 
+    was feeling a bit bored. Popped the router open and saw 4 pins in a row. "Thats UART", wondered what architecture and webserver the system was running so I was 
+    hungry for info.
+
+
+## [0.1] Detecting 3.3v, Ground, TX and RX pins.
+    - Ground is ground, plug the device in and use a multimeter in continuity mode. If it beeps when one probe is touching metal housing and the other is on a pin, 
+    you know you have a ground pin.
+
+    - 3.3v power pin, rinse and repeat the same as ground but the power on and your multimeter set to 0.00 DC detection.
+
+    - To detect TX, a pin which has a changing voltage needs to be found (e.g. in my case 3.2/2.3 changing in patterns).
+
+    - RX will be 0v and no continuity.
+
+    Once all 4 have been found, UART likely has been identified.
+
+
+## [0.2] Setup of raspberry pi as serial (UART) console
+
+    Boredum leads to curiosity, curiosity leads to experimentation and experimentation leads to discovery.
+
+    With no UART to USB dongle I remembered that the Raspberry Pi has GPIO pins. Quick gooling shows 2 pins of interest, 
+    
+    - GPIO14 = TXD
+    - GPIO15 = RXD
+
+    (https://cdn.sparkfun.com/assets/learn_tutorials/1/5/9/5/GPIO.png)
+
+
+    Below is a basic diagram of the raspberry pi acting in place of a UART <-> USB dongle.
+
+
+                                +---------+
+                                |         |
+                                | raspi   |
+                                | 3B      |
+                                | 4GB     |
+                                |         |
+                                |  6 t8 10 |
+                                +^-^-^--^-+
+                                | | |  |
+                                | | |  |
+    +---------------------------+-+-+--+
+    |                           1 2 3 4|
+    |    ASUS RT-AC1200G+              |
+    |                                  |
+    |    ---- UART PIN ----            |
+    |    1 = 3.3v power pin            |
+    |    2 = Ground pin                |
+    |    3 = TX                        |
+    |    4 = RX                        |
+    |                                  |
+    |    - raspberry GPIO -            |
+    |    pin 6  (ground) = ground      |
+    |    pin 8  (GPIO14) = TXD         |
+    |    pin 10 (GPIO15) = RXD         |
+    |                                  |
+    +----------------------------------+
+
+
+## [0.3] Nada
+    Upon SSHing into the rpi, using the following command had no output.
+
+    ```
+    picocom -b 115200 /dev/AMA0
+    ```
+
+    Thought that was a bit Weird as something should output even if I have the BAUD rate wrong...
+
+    The next morning I asked some people and turns out on new the newer raspberry Pis that serial needs to be enabled
+
+    ```
+    sudo raspi-config
+    ```
+    -> Interfacing options -> Serial -> No to login shell to be accessible over Serial -> Yes to Serial port hardware being enabled
+
+    (https://www.electronicwings.com/raspberry-pi/raspberry-pi-uart-communication-using-python-and-c)
+
+
+## [0.4] Password....
+
+    Upon seeing the scrolling output from a successful UART I got excited, after about 30s of booting I was prompted with a login....
+
+    ```
+    RT-AC1200G+ login:
+    ```
+
+    I didn't know the password. Doing some google fu I found a russian blog reviewing this exact router.
+    ( https://www.foxnetwork.ru/index.php/36-reviews/reviews/221-asus-rt-ac1200g )
+
+    """
+    Для доступа к командной строке используются та же пара логин-пароль, что и для доступа к веб-интерфейсу маршрутизатора. 
+    Микропрограммное обеспечение тестируемой модели построено на базе операционной системы 
+    Linux 2.6.36.4 с использованием BusyBox 1.17.4.
+    """
+
+    Huh, interesting okay, at least we know its not protected with a device specific generated password or something hard to bruteforce
+    """
+    To access the command line, the same login-password pair is used as for accessing the router's web interface.
+    The firmware of the tested model is based on the operating system
+    Linux 2.6.36.4 using BusyBox 1.17.4.
+    """
+
+
+## [0.4] Reset -> Admin
+
+    Resetting the device and accessing the webpanel revealed that the default credentials were admin:admin...as expected...
+
+    Trying that combination on the UART granted a successful login as the admin user.
+
+
+
+## [0.x] References / Resources
+    
+    
+
+
+
+
+</body>
+</html>
