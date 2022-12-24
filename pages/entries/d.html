@@ -137,14 +137,212 @@
     Linux 2.6.36.4 using BusyBox 1.17.4.
     """
 
-
+    
 ## [0.4] Reset -> Admin
 
     Resetting the device and accessing the webpanel revealed that the default credentials were admin:admin...as expected...
-
     Trying that combination on the UART granted a successful login as the admin user.
 
-    
+    ```
+    RT-AC1200G+ login: admin
+    Password:
+    admin@RT-AC1200G+:/tmp/home/root#
+    ```
+
+
+## [0.5] enumeration
+    Looking at what capabilities are available isn't too satisfying. 
+    Limited busybox 
+
+    ```
+    admin@RT-AC1200G+:/tmp/home/root# busybox --help
+    BusyBox v1.17.4 (2020-06-19 13:52:12 CST) multi-call binary.
+    Copyright (C) 1998-2009 Erik Andersen, Rob Landley, Denys Vlasenko
+    and others. Licensed under GPLv2.
+    See source distribution for full notice.
+
+    Usage: busybox [function] [arguments]...
+        or: function [arguments]...
+
+            BusyBox is a multi-call binary that combines many common Unix
+            utilities into a single executable.  Most people will create a
+            link to busybox for each function they wish to use and BusyBox
+            will act like whatever it was invoked as.
+
+    Currently defined functions:
+            [, [[, arp, ash, awk, basename, blkid, cat, chmod, chown, chpasswd,
+            clear, cmp, cp, crond, cut, date, dd, devmem, df, dirname, dmesg, du,
+            e2fsck, echo, egrep, env, ether-wake, expr, fdisk, fgrep, find, flock,
+            free, fsck, fsck.ext2, fsck.ext3, fsck.minix, fsync, grep, gunzip,
+            gzip, head, ifconfig, insmod, ionice, kill, killall, klogd, less, ln,
+            logger, login, ls, lsmod, lsusb, md5sum, mdev, mkdir, mke2fs,
+            mkfs.ext2, mkfs.ext3, mknod, mkswap, modprobe, more, mount, mv,
+            netstat, nice, nohup, nslookup, pidof, ping, ping6, printf, ps, pwd,
+            readlink, renice, rm, rmdir, rmmod, route, sed, setconsole, sh, sleep,
+            sort, strings, swapoff, swapon, sync, syslogd, tail, tar, telnetd,
+            test, top, touch, tr, traceroute, traceroute6, true, tune2fs, udhcpc,
+            umount, uname, unzip, uptime, usleep, vconfig, vi, watch, wc, which,
+            zcat, zcip
+    ```
+
+    No wget, no curl, but uname ifconfig and basic stream editing commands like tr, wc etc etc etc.
+    ```
+    admin@RT-AC1200G+:/tmp/home/root# find / -name *ssh*
+    /sbin/run_sshd
+    /tmp/home/root/.ssh
+    /usr/bin/ssh
+    ```
+
+    luckily scp is available, makes life nice and easy:
+    ```
+    admin@RT-AC1200G+:/tmp/home/root# find / -name *scp*
+    /lib/modules/2.6.36.4brcmarm/kernel/net/netfilter/xt_dscp.ko
+    /usr/bin/scp
+    /usr/lib/xtables/libxt_dscp.so
+    ```
+
+    Grabbed a full fledged busybox and dropped to disk so I can have QoL improvements
+    ```
+    p4@raspberrypi:~ $ wget https://busybox.net/downloads/binaries/1.21.1/busybox-armv7l
+    p4@raspberrypi:~ $ admin@RT-AC1200G+:/tmp/home/root# scp p4@192.168.2.154:/home/p4/busybox-armv7l /tmp/busybox-armv7l
+    ```
+
+    With the full armv7l busybox installed, the full suite can be obtained 
+    ```
+    admin@RT-AC1200G+:/tmp# ./busybox-armv7l
+    BusyBox v1.21.1 (2013-07-08 10:26:30 CDT) multi-call binary.
+    BusyBox is copyrighted by many authors between 1998-2012.
+    Licensed under GPLv2. See source distribution for detailed
+    copyright notices.
+
+    Usage: busybox [function [arguments]...]
+        or: busybox --list[-full]
+        or: busybox --install [-s] [DIR]
+        or: function [arguments]...
+
+            BusyBox is a multi-call binary that combines many common Unix
+            utilities into a single executable.  Most people will create a
+            link to busybox for each function they wish to use and BusyBox
+            will act like whatever it was invoked as.
+
+    Currently defined functions:
+            [, [[, acpid, add-shell, addgroup, adduser, adjtimex, arp, arping, ash,
+            awk, base64, basename, beep, blkid, blockdev, bootchartd, brctl,
+            bunzip2, bzcat, bzip2, cal, cat, catv, chat, chattr, chgrp, chmod,
+            chown, chpasswd, chpst, chroot, chrt, chvt, cksum, clear, cmp, comm,
+            conspy, cp, cpio, crond, crontab, cryptpw, cttyhack, cut, date, dc, dd,
+            deallocvt, delgroup, deluser, depmod, devmem, df, dhcprelay, diff,
+            dirname, dmesg, dnsd, dnsdomainname, dos2unix, du, dumpkmap,
+            dumpleases, echo, ed, egrep, eject, env, envdir, envuidgid, ether-wake,
+            expand, expr, fakeidentd, false, fbset, fbsplash, fdflush, fdformat,
+            fdisk, fgconsole, fgrep, find, findfs, flock, fold, free, freeramdisk,
+            fsck, fsck.minix, fsync, ftpd, ftpget, ftpput, fuser, getopt, getty,
+            grep, groups, gunzip, gzip, halt, hd, hdparm, head, hexdump, hostid,
+            hostname, httpd, hush, hwclock, id, ifconfig, ifdown, ifenslave,
+            ifplugd, ifup, inetd, init, insmod, install, ionice, iostat, ip,
+            ipaddr, ipcalc, ipcrm, ipcs, iplink, iproute, iprule, iptunnel,
+            kbd_mode, kill, killall, killall5, klogd, last, less, linux32, linux64,
+            linuxrc, ln, loadfont, loadkmap, logger, login, logname, logread,
+            losetup, lpd, lpq, lpr, ls, lsattr, lsmod, lsof, lspci, lsusb, lzcat,
+            lzma, lzop, lzopcat, makedevs, makemime, man, md5sum, mdev, mesg,
+            microcom, mkdir, mkdosfs, mke2fs, mkfifo, mkfs.ext2, mkfs.minix,
+            mkfs.vfat, mknod, mkpasswd, mkswap, mktemp, modinfo, modprobe, more,
+            mount, mountpoint, mpstat, mt, mv, nameif, nanddump, nandwrite,
+            nbd-client, nc, netstat, nice, nmeter, nohup, nslookup, ntpd, od,
+            openvt, passwd, patch, pgrep, pidof, ping, ping6, pipe_progress,
+            pivot_root, pkill, pmap, popmaildir, poweroff, powertop, printenv,
+            printf, ps, pscan, pstree, pwd, pwdx, raidautorun, rdate, rdev,
+            readahead, readlink, readprofile, realpath, reboot, reformime,
+            remove-shell, renice, reset, resize, rev, rm, rmdir, rmmod, route, rpm,
+            rpm2cpio, rtcwake, run-parts, runlevel, runsv, runsvdir, rx, script,
+            scriptreplay, sed, sendmail, seq, setarch, setconsole, setfont,
+            setkeycodes, setlogcons, setserial, setsid, setuidgid, sh, sha1sum,
+            sha256sum, sha3sum, sha512sum, showkey, slattach, sleep, smemcap,
+            softlimit, sort, split, start-stop-daemon, stat, strings, stty, su,
+            sulogin, sum, sv, svlogd, swapoff, swapon, switch_root, sync, sysctl,
+            syslogd, tac, tail, tar, tcpsvd, tee, telnet, telnetd, test, tftp,
+            tftpd, time, timeout, top, touch, tr, traceroute, traceroute6, true,
+            tty, ttysize, tunctl, udhcpc, udhcpd, udpsvd, umount, uname, unexpand,
+            uniq, unix2dos, unlzma, unlzop, unxz, unzip, uptime, users, usleep,
+            uudecode, uuencode, vconfig, vi, vlock, volname, wall, watch, watchdog,
+            wc, wget, which, who, whoami, whois, xargs, xz, xzcat, yes, zcat, zcip
+
+        ```
+
+    WPS pin can be dumped with ease using nvram storage (nvram is used alot for random storage)
+    ```
+    admin@RT-AC1200G+:/tmp# nvram show | grep -E "secret_code|wps_device_pin"
+    size: 40914 bytes (24622 left)
+    wps_device_pin=45441813
+    secret_code=45441813
+    ```
+
+
+    ```
+    admin@RT-AC1200G+:/tmp# ./busybox-armv7l netstat -lptnu    
+    Active Internet connections (only servers)
+    Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+    tcp        0      0 0.0.0.0:5473            0.0.0.0:*               LISTEN      354/u2ec
+    tcp        0      0 0.0.0.0:18017           0.0.0.0:*               LISTEN      165/wanduck
+    tcp        0      0 0.0.0.0:3394            0.0.0.0:*               LISTEN      354/u2ec
+    tcp        0      0 192.168.2.1:515         0.0.0.0:*               LISTEN      355/lpd
+    tcp        0      0 192.168.2.1:1990        0.0.0.0:*               LISTEN      170/wps_monitor
+    tcp        0      0 0.0.0.0:43655           0.0.0.0:*               LISTEN      494/miniupnpd
+    tcp        0      0 192.168.2.1:9100        0.0.0.0:*               LISTEN      355/lpd
+    tcp        0      0 127.0.0.1:80            0.0.0.0:*               LISTEN      189/httpd
+    tcp        0      0 192.168.2.1:80          0.0.0.0:*               LISTEN      189/httpd
+    tcp        0      0 127.0.0.1:53            0.0.0.0:*               LISTEN      183/dnsmasq
+    tcp        0      0 192.168.2.1:53          0.0.0.0:*               LISTEN      183/dnsmasq
+    tcp        0      0 192.168.2.1:3838        0.0.0.0:*               LISTEN      355/lpd
+    udp        0      0 0.0.0.0:9999            0.0.0.0:*                           190/infosvr
+    udp        0      0 0.0.0.0:42000           0.0.0.0:*                           168/eapd
+    udp        0      0 0.0.0.0:41748           0.0.0.0:*                           472/avahi-daemon: r
+    udp        0      0 127.0.0.1:42032         0.0.0.0:*                           180/acsd
+    udp        0      0 127.0.0.1:40500         0.0.0.0:*                           170/wps_monitor
+    udp        0      0 127.0.0.1:53            0.0.0.0:*                           183/dnsmasq
+    udp        0      0 192.168.2.1:53          0.0.0.0:*                           183/dnsmasq
+    udp        0      0 0.0.0.0:67              0.0.0.0:*                           183/dnsmasq
+    udp        0      0 0.0.0.0:5474            0.0.0.0:*                           354/u2ec
+    udp        0      0 0.0.0.0:18018           0.0.0.0:*                           165/wanduck
+    udp        0      0 0.0.0.0:1900            0.0.0.0:*                           494/miniupnpd
+    udp        0      0 0.0.0.0:1900            0.0.0.0:*                           170/wps_monitor
+    udp        0      0 0.0.0.0:38000           0.0.0.0:*                           168/eapd
+    udp        0      0 0.0.0.0:59000           0.0.0.0:*                           168/eapd
+    udp        0      0 0.0.0.0:37000           0.0.0.0:*                           168/eapd
+    udp        0      0 127.0.0.1:38032         0.0.0.0:*                           178/nas
+    udp        0      0 127.0.0.1:59032         0.0.0.0:*                           179/wlceventd
+    udp        0      0 127.0.0.1:37064         0.0.0.0:*                           170/wps_monitor
+    udp        0      0 192.168.2.1:50380       0.0.0.0:*                           494/miniupnpd
+    udp        0      0 192.168.2.1:5351        0.0.0.0:*                           494/miniupnpd
+    udp        0      0 0.0.0.0:5353            0.0.0.0:*                           472/avahi-daemon: r
+    udp        0      0 0.0.0.0:5355            0.0.0.0:*                           472/avahi-daemon: r
+    udp        0      0 0.0.0.0:43000           0.0.0.0:*                           168/eapd
+    udp        0      0 127.0.0.1:61689         0.0.0.0:*                           218/mastiff
+    ```
+    (nice command i saw in a flashback team video[4])
+
+
+    With 25 ports listening externally, thats alot of attack surface area to cover.
+
+
+
+
+
+## [0.x] Looking at webcontent
+    ...
+
+
+
+
+
+
+
+
+
+
+
+
+
     Part 2, enumeration, exfil and analysis....
 
 
@@ -152,7 +350,13 @@
     [0] https://cdn.sparkfun.com/assets/learn_tutorials/1/5/9/5/GPIO.png
     [1] https://www.electronicwings.com/raspberry-pi/raspberry-pi-uart-communication-using-python-and-c
     [2] https://www.foxnetwork.ru/index.php/36-reviews/reviews/221-asus-rt-ac1200g 
+<<<<<<< HEAD
+=======
     [3] https://asciiflow.com/#/
+>>>>>>> 4ed8795d0f5745f799408b8b10b758786e2a609d
+
+    [3]https://w00tsec.blogspot.com/2014/07/hacking-asus-rt-ac66u-and-preparing-for.html
+    [4]https://youtu.be/vsg9YgvGBec?t=422
 
 </body>
 </html>
