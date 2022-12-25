@@ -137,7 +137,7 @@
     Linux 2.6.36.4 using BusyBox 1.17.4.
     """
 
-    
+
 ## [0.4] Reset -> Admin
 
     Resetting the device and accessing the webpanel revealed that the default credentials were admin:admin...as expected...
@@ -319,7 +319,7 @@
     udp        0      0 0.0.0.0:43000           0.0.0.0:*                           168/eapd
     udp        0      0 127.0.0.1:61689         0.0.0.0:*                           218/mastiff
     ```
-    (nice command i saw in a flashback team video[4])
+    (nice command i saw in a flashback team video[5])
 
 
     With 25 ports listening externally, thats alot of attack surface area to cover.
@@ -329,14 +329,51 @@
 
 
 ## [0.x] Looking at webcontent
-    ...
+    
 
 
 
 
+## [0.x] Dumb Open redirect
+    ```
+    D:\www>C:\TOOLING\rg.exe --hidden "nextPage"
+    state.js
+    633:location.href = 'Main_Password.asp?nextPage=' + window.location.pathname.substring(1 ,window.location.pathname.length);
+    Main_Password.asp
+    236:var nextPage = decodeURIComponent('<% get_ascii_parameter("nextPage"); %>');
+    238:location.href = (nextPage != "") ? nextPage : "<% rel_index_page(); %>";
+    ```
 
+    ```
+    function submitForm()
+    {
+        if(validForm())
+        {
+            document.getElementById("error_status_field").style.display = "none";
+            document.form.http_username.value = document.form.http_username_x.value;
+            document.form.http_passwd.value = document.form.http_passwd_x.value;
+            document.form.http_username_x.disabled = true;
+            document.form.http_passwd_x.disabled = true;
+            document.form.http_passwd_2_x.disabled = true;
+            document.form.btn_modify.style.display = "none";
+            document.getElementById('loadingIcon').style.display = '';
+            document.form.submit();
+            var nextPage = decodeURIComponent('<% get_ascii_parameter("nextPage"); %>');
+            setTimeout(function()
+            {
+                location.href = (nextPage != "") ? nextPage : "<% rel_index_page(); %>";
+            }, 3000);
+        }
+        else
+        return;
+    }
+    ```
 
-
+    the asp.net results in:
+    ```
+    var nextPage = decodeURIComponent('https://google.com');
+    location.href = (nextPage != "") ? nextPage : "<% rel_index_page(); %>";
+    ```
 
 
 
@@ -350,13 +387,9 @@
     [0] https://cdn.sparkfun.com/assets/learn_tutorials/1/5/9/5/GPIO.png
     [1] https://www.electronicwings.com/raspberry-pi/raspberry-pi-uart-communication-using-python-and-c
     [2] https://www.foxnetwork.ru/index.php/36-reviews/reviews/221-asus-rt-ac1200g 
-<<<<<<< HEAD
-=======
     [3] https://asciiflow.com/#/
->>>>>>> 4ed8795d0f5745f799408b8b10b758786e2a609d
-
-    [3]https://w00tsec.blogspot.com/2014/07/hacking-asus-rt-ac66u-and-preparing-for.html
-    [4]https://youtu.be/vsg9YgvGBec?t=422
+    [4] https://w00tsec.blogspot.com/2014/07/hacking-asus-rt-ac66u-and-preparing-for.html
+    [5] https://youtu.be/vsg9YgvGBec?t=422
 
 </body>
 </html>
