@@ -39,11 +39,34 @@
 
     - 3.3v power pin, rinse and repeat the same as ground but the power on and your multimeter set to 0.00 DC detection.
 
-    - To detect TX, a pin which has a changing voltage needs to be found (e.g. in my case 3.2/2.3 changing in patterns).
+    - To detect TX, a pin which has a changing voltage needs to be found (e.g. in my case 3.2v/3.3v DC changing in patterns).
+
+    +         0     1     0     1     0     1     0     1     0        +
+     ------+     +-----+     +-----+     +-----+     +-----+     +-----
+    +      |     |     |     |     |     |     |     |     |     |     +
+           |     |     |     |     |     |     |     |     |     |
+    + IDLE |     |     |     |     |     |     |     |     |     |     +
+           |     |     |     |     |     |     |     |     |     |
+    +      +-----+     +-----+     +-----+     +-----+     +-----+     +
+                                                             MSB  stop
+                                                                   bit
 
     - RX will be 0v and no continuity.
 
     Once all 4 have been found, UART likely has been identified.
+
+
+    TX(transmit) needs to transmit to RX(recieve) and ground needs to be grounded on both devices
+    +----------+         +----------+
+    |   UART   |         |   UART   |
+    |          |         |          |
+    |      TX  <--------->  RX      |
+    |          |         |          |
+    |      RX  <--------->  TX      |
+    |          |         |          |
+    |      GND <--------->  GND     |
+    |          |         |          |
+    +----------+         +----------+
 
 
 ## [0.2] Setup of raspberry pi as serial (UART) console
@@ -376,7 +399,187 @@
     ```
 
 
+    Abuse via 
+    ```
+    http://router.asus.com/Main_Password.asp?nextPage=https://google.com
+    ```
 
+    Prompts a logged in user to 
+
+
+
+
+    enabling ssh 
+    ```
+    dropbear -p 192.168.2.1:22 -a
+    ```
+
+
+    ```
+    admin@RT-AC1200G+:/tmp# ps
+    PID USER       VSZ STAT COMMAND
+    174 admin     1292 S    protect_srv
+    175 admin     1292 S    protect_srv
+    ```
+
+
+    ```
+    admin@RT-AC1200G+:/tmp# find / -name protect_srv
+    /usr/sbin/protect_srv
+    ```
+
+    ```
+    scp /usr/sbin/protect_srv p4@192.168.2.154:/home/p4/protect_srv
+    ```
+
+
+    ```
+    admin@RT-AC1200G+:/tmp# ./busybox-armv7l strings /usr/sbin/protect_srv
+    /lib/ld-uClibc.so.0
+    libnvram.so
+    strcpy
+    perror
+    read
+    fopen
+    nvram_get
+    fclose
+    fwrite
+    strlen
+    free
+    libshared.so
+    wan_primary_ifunit
+    snprintf
+    getpid
+    nvram_get_int
+    memcpy
+    system
+    sleep
+    sysinfo
+    socket
+    calloc
+    fprintf
+    bind
+    strlcpy
+    strncpy
+    unlink
+    sscanf
+    memset
+    strcmp
+    exit
+    libptcsrv.so
+    Debug2Console
+    GetDebugValue
+    isFileExist
+    libpthread.so.0
+    pthread_attr_destroy
+    pthread_create
+    pthread_attr_init
+    accept
+    __deregister_frame_info
+    pthread_attr_setstacksize
+    sigaction
+    _fini
+    _Jv_RegisterClasses
+    pthread_attr_setdetachstate
+    __register_frame_info
+    libgcc_s.so.1
+    abort
+    libc.so.0
+    listen
+    __uClibc_main
+    _edata
+    __bss_start
+    __bss_start__
+    __bss_end__
+    __end__
+    _end
+    _load_record_info
+    _dump_record_to_file
+    dump_all_record
+    handlesignal
+    _add_record
+    add_lock_rule
+    add_lockall_rule
+    del_lock_rule
+    del_lockall_rule
+    receive_s
+    IsLanSide
+    start_local_socket
+    main
+    /tmp/protect_srv_wan_ssh.log
+    /tmp/protect_srv_lan_ssh.log
+    /tmp/protect_srv_lan_telnet.log
+    local_socket_thread
+    /tmp/PTCSRV_DEBUG
+    [ProtectionSrv][%s:(%d)]Service not support at WAN
+    [ProtectionSrv][%s:(%d)]Service not support at LAN
+    [ProtectionSrv][%s:(%d)]Not support
+            address     retry  since_last_try   block_time   block_status
+    %15s%10u%16ld%13d%15d
+    [ProtectionSrv][%s:(%d)]BUG !! wrong iptables rule count, %d != %d
+    [ProtectionSrv][%s:(%d)]BUG !! wrong record count, %d != %d
+    [ProtectionSrv][%s:(%d)]
+    WAN SSH list count: %d
+    iptables rule count: %d
+    iptables rule peak: %d
+    Please refer to %s
+    --------------------------
+    LAN SSH list count: %d
+    iptables rule count: %d
+    iptables rule peak: %d
+    Please refer to %s
+    --------------------------
+    LAN TELNET list count: %d
+    iptables rule count: %d
+    iptables rule peak: %d
+    Please refer to %s
+    [ProtectionSrv][%s:(%d)]Unknown SIGNAL
+    %u.%u.%u.%u
+    TELNET
+    logger -t %s [%s] login succeeded from %s after %d attempts
+    PTCSRV
+    [ProtectionSrv][%s:(%d)]FULL. Ignore this case: %s
+    wans_mode
+    wan%d_
+    0.0.0.0
+    lan_ipaddr
+    lan_netmask
+    sshd_port
+    %s%s
+    iptables -A %s -p tcp --dport %d -s %s -j DROP
+    [ProtectionSrv][%s:(%d)]Add %s rules of %s into %s chain.
+    iptables -I %s -p tcp --dport %d -j DROP
+    [ProtectionSrv][%s:(%d)]Insert locking %s rule into %s chain.
+    iptables -D %s -p tcp --dport %d -s %s -j DROP
+    [ProtectionSrv][%s:(%d)]Remove locking %s rule of %s from %s chain.
+    iptables -D %s -p tcp --dport %d -j DROP
+    [ProtectionSrv][%s:(%d)]Remove locking %s rule from %s chain.
+    [ProtectionSrv][%s:(%d)]ERROR reading from socket.
+    [ProtectionSrv][%s:(%d)][receive report] addr:[%s] s_type:[%d] status:[%d] msg:[%s]
+    echo "[ProtectionSrv][receive report] addr:[%s] s_type:[%d] status:[%d] msg:[%s]" >> %s
+    /tmp/protect_srv.log
+    [ProtectionSrv][%s:(%d)]From LAN side.
+    [ProtectionSrv][%s:(%d)]From WAN side.
+    write
+    [ProtectionSrv][%s:(%d)]Unknown message.
+    [ProtectionSrv][%s:(%d)]socket error
+    socket error
+    /var/run/protect_srv_socket
+    [ProtectionSrv][%s:(%d)]socket bind error
+    socket bind error
+    [ProtectionSrv][%s:(%d)]listen error
+    listen error
+    [ProtectionSrv][%s:(%d)]accept error
+    accept error
+    [ProtectionSrv][%s:(%d)][Start ProtectionSrv]
+    echo %d > %s
+    /var/run/protect_srv.pid
+    [ProtectionSrv][%s:(%d)]Start local socket thread.
+    [ProtectionSrv][%s:(%d)]ProtectionSrv Terminated
+    GCC: (GNU) 3.3.2 20031005 (Debian prerelease)
+    GCC: (Buildroot 2012.02) 4.5.3
+    [...SNIP...]
+    ```
 
 
 
