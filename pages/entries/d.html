@@ -299,7 +299,7 @@
     wps_device_pin=45441813
     secret_code=45441813
     ```
-
+    (wootsec old asus explotation[4])
 
     ```
     admin@RT-AC1200G+:/tmp# ./busybox-armv7l netstat -lptnu    
@@ -348,8 +348,20 @@
     With 25 ports listening externally, thats alot of attack surface area to cover.
 
 
+    u2ec = some USB related binary
+    lpd = Line Printer Daemon binary
+    infosrv = some references to some AiCloud? S50aicloud
+    wps_monitor = ?
+    miniupnpd = https://github.com/miniupnp/miniupnp ?
+    wanduck = https://github.com/RMerl/asuswrt-merlin/blob/master/release/src/router/rc/wanduck.c ? main webserver / logic binary ?
 
 
+
+    All these binaries have old Buildroots, interesting and likely vulns to be found. 
+    ```
+    GCC: (GNU) 3.3.2 20031005 (Debian prerelease)
+    GCC: (Buildroot 2012.02) 4.5.3
+    ```
 
 ## [0.x] Looking at webcontent
     
