@@ -1,6 +1,175 @@
 <!DOCTYPE html>
 
-<!-- Inspiration from here https://glenwing.github.io/ -->
+<meta name="viewport" content="width=device-width">
+
+<style>
+    html,
+    body {
+        margin:             0;
+        height:             100%;
+        padding:            0;
+        -webkit-font-smoothing: subpixel-antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+        font-size:          15px;
+        line-height:        120%;
+        min-height:         100%;
+        overflow-y:         scroll;
+    }
+
+    .number {
+        font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+        font-size:          15px;
+    }
+
+    div.wrapper {
+        min-height:         100%;
+        position:           relative;
+    }
+
+    div.main {
+        border:             0px solid transparent;
+        font-size:          15px;
+        padding-bottom:     48px;
+        margin-left:        auto;
+        margin-right:       auto;
+    }
+
+    div.footer {
+        width:              100%;
+        position:           absolute;
+        bottom:             0;
+        left:               0;
+        vertical-align:     middle;
+        background-color:   #DDDDDD;
+        cursor:             pointer;
+        min-width:          512px;
+        padding-top:        10px;
+        padding-bottom:     10px;
+        font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+        font-size:          15px;
+    }
+    div.footer a {
+        color:              #888888;
+        text-decoration:    none;
+        vertical-align:     middle;
+        padding:            10px;
+    }
+
+    div.header {
+        font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+        line-height:        120%;
+        font-weight:        bold;
+        font-size:          16px;
+        padding-left:       16px;
+        padding-right:      16px;
+        padding-top:        12px;
+        padding-bottom:     0px;
+        min-width:          480px;
+    }
+    div.header a {
+        cursor:             pointer;
+        text-decoration:    none;
+        color:              #000000;
+    }
+    div.header i.back_arrow {
+        transform:rotate(90deg) scale(0.75);
+        line-height:0;
+        position:relative;
+        bottom:-0.2em;
+    }
+
+    span.title {
+        font-weight:bold;
+    }
+
+    table, tr, td {
+        padding:4px;
+        border: 0px solid transparent;
+    }
+
+    a:link {
+        color:#777777;
+        text-decoration:none;
+    }
+    a:visited {
+        color:#777777;
+        text-decoration:none;
+    }
+    a:hover {
+        color:#000000;
+        text-decoration:underline;
+    }
+    a:active {
+        color:#000000;
+        text-decoration:underline;
+    }
+
+    hr {
+        height:             1px;
+        border-width:       0;
+        color:              #888888;
+        background-color:   #888888;
+    }
+        
+</style>
+
+<html>
+
+<head>
+    <title>Title here</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="main">
+            <div class="header">
+                <a href="https://p4yl0ad.github.io"><i class="material-icons back_arrow">subdirectory_arrow_left</i>&nbsp;title 2</a>
+                <hr />
+            </div>
+            <table style="padding-left:20px;">
+                <tr><td><span class="title">First list</span>
+                    <ul>
+                        <li><a target="_blank" href="hhttps://google.com/">Version x.x</a>&nbsp; (2022&nbsp;XXXXXX&nbsp;XX)</li>
+                        
+                    </ul>
+                </td></tr>
+                <tr><td><span class="title">Title of second list</span>
+                    <ul>
+                        <li><a target="_blank" href="https://google.com/">google.com</a>&nbsp; (2009&nbsp;October&nbsp;26)</li>
+                    </ul>
+                </td></tr>
+                <tr><td><span class="title">Title of third list</span>
+                    <ul>
+                        <li><a target="_blank" href="https://google.com/">google.com</a>&nbsp; (2008&nbsp;January&nbsp;28)</li>
+                    </ul>
+                </td></tr>
+                <tr><td><span class="title">Title of fourth lust</span>
+                    <ul>
+                        <li><a target="_blank" href="https://google.com/">google.com</a> (2007&nbsp;September&nbsp;14)</li>
+                    </ul>
+                </td></tr>
+                <tr><td><span class="title">Title of text</span>
+		<br><br>
+		Content here: <a href="https://www.google.com">https://www.google.com</a>
+		<br><br>
+            </table>
+        </div>
+
+        <div class="footer" onclick="document.getElementById('profile_link').click();">
+            <a id="profile_link" target="_blank" href="https://github.com/p4yl0ad">Github</a>
+        </div>
+    </div>
+</body>
+</html>
+
+<!-- <!DOCTYPE html>
+
+Inspiration from here https://glenwing.github.io/ 
 
 <meta name="viewport" content="width=device-width">
 
@@ -151,3 +320,5 @@
 </div>
 </body>
 </html>
+
+-->
