@@ -120,13 +120,8 @@
         color:              #888888;
         background-color:   #888888;
     }
-        
 </style>
-
 <html>
-
-
-
 
 <head>
     <title>p4 blog</title>
@@ -148,28 +143,48 @@
             <p>
                 First there was Pascal, then there was Object Pascal which could be written in the Delphi IDE, now there is Delphi which is Object Pascal.
                 A little confusing, I will use Object Pascal, Delphi and Pascal interchangeably throughout.
+
+                Using Free Pascal 3.2.2 - https://kumisystems.dl.sourceforge.net/project/freepascal/Win32/3.2.2/fpc-3.2.2.win32.and.win64.exe
+                Install location - C:\FPC\3.2.2
+                Custom install - Free Pascal for Win64 (x64)
             </p>
 
-                    
-            
+
             <tr><td><span class="title">Inspiration</span>
-            <p>
-                some text here 
-                <pre><code>
-                    program HelloWorld;
-                    {$APPTYPE CONSOLE}
-                    begin
-                        WriteLn('Hello World');
-                    end.
-                </code></pre>
+                <p>
+                A long long time ago, I came across 0xsp's work in Pascal and was interested in seeing the capabilities which were possible. 
+                I started fucking around in the language during C19 lockdown writing a small utility for my boss to run on his work laptop in order to keep his activity in teams / their chat software in the green while he did other stuff lol.
+                It was a toxic relationship between pascal and myself, super verbose and control was able to be gained but it had its quirks and documentation from ~2008 which pissed me off. 
+
+                (0xsp/zux0x3a/lawrenceamer https://github.com/lawrenceamer)
             </p>
+
+
+            <tr><td><span class="title">Using win32 API from pascal</span>
+                <p>
+                    some text here 
+                    <pre><code>
+                        program HelloWorldMsg;
+                        
+                        uses Windows;
     
-                
-            <tr><td><span class="title">Using win32 from pascal</span>
-            <p>
-                some text here 
-            </p>
-            
+                        begin
+                            MessageBox(0, 'Hello World Title', 'Hello World Body', 0);
+                        end.
+                    </code></pre>
+    
+                    <pre><code>
+                        C:\FPC\3.2.2\bin\i386-win32>fpc -Px86_64 -Twin64 C:\Users\p4\Desktop\hello.pas
+    
+                        Free Pascal Compiler version 3.2.2 [2021/05/15] for x86_64
+                        Copyright (c) 1993-2021 by Florian Klaempfl and others
+                        Target OS: Win64 for x64
+                        Compiling C:\Users\p4\Desktop\hello.pas
+                        Linking C:\Users\p4\Desktop\hello.exe
+                        6 lines compiled, 0.1 sec, 32416 bytes code, 1524 bytes data
+                    </code></pre>
+                </p>
+    
             </td></tr>
         </table>
     </div>
