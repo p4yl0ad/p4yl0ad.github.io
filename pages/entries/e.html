@@ -125,23 +125,52 @@
 
 <html>
 
+
+
+
 <head>
     <title>p4 blog</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 </head>
 
 <body>
 <div class="wrapper">
     <div class="main">
         <div class="header">
-            Writing a pascal shellcode loader ( win32 )
+            Writing a delphi (Object Pascal) shellcode loader ( win32 )
             <hr />
         </div>
         <table style="padding-left:20px;">
             <!--<tr><td>caveman</td></tr>-->
+
+            <tr><td><span class="title">Inspiration</span>
+                <tr>
+                    First there was Pascal, then there was Object Pascal which could be written in the Delphi IDE, now there is Delphi which is Object Pascal.
+                    Confusing, I will use Object Pascal, Delphi and Pascal interchangeably throughout.
+                </tr>
+
+            
+
+
+
+
             <tr><td><span class="title">Inspiration</span>
                 <tr>
                     some text here 
+
+                    <pre><code class="language-delphi">
+                        program HelloWorld;
+
+                            {$APPTYPE CONSOLE}
+
+                            begin
+                                WriteLn('Hello World');
+                            end.
+                    </code></pre>
+
+
                 </tr>
                 
 
