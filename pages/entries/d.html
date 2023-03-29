@@ -24,8 +24,11 @@
     [0.2] Setup of raspberry pi as serial (UART) console
     [0.3] Nada
     [0.4] Password....
-    [0.4] 
-
+    [0.5] Reset -> Admin
+    [0.6] Enumeration
+    [0.7] Dumb Open redirect CVE-2022-48127
+    [0.8] Misc notes
+    [0.9] References / Resources
 
 ## [0.0] Spawn
     Had a ASUS RT-AC1200G+ router that was doing nothing, had been watching Flashback team (https://www.youtube.com/@FlashbackTeam/videos) videos on youtube and 
@@ -161,7 +164,7 @@
     """
 
 
-## [0.4] Reset -> Admin
+## [0.5] Reset -> Admin
 
     Resetting the device and accessing the webpanel revealed that the default credentials were admin:admin...as expected...
     Trying that combination on the UART granted a successful login as the admin user.
@@ -173,7 +176,7 @@
     ```
 
 
-## [0.5] enumeration
+## [0.6] Enumeration
     Looking at what capabilities are available isn't too satisfying. 
     Limited busybox 
 
@@ -363,13 +366,7 @@
     GCC: (Buildroot 2012.02) 4.5.3
     ```
 
-## [0.x] Looking at webcontent
-    
-
-
-
-
-## [0.x] Dumb Open redirect
+## [0.7] Dumb Open redirect CVE-2022-48127 
     ```
     D:\www>C:\TOOLING\rg.exe --hidden "nextPage"
     state.js
@@ -416,16 +413,14 @@
     http://router.asus.com/Main_Password.asp?nextPage=https://google.com
     ```
 
-    Prompts a logged in user to 
+    Prompts a logged in user to change password and then upon password change redirects a user to an arbitrary site 
 
 
-
-
+## [0.8] Misc notes
     enabling ssh 
     ```
     dropbear -p 192.168.2.1:22 -a
     ```
-
 
     ```
     admin@RT-AC1200G+:/tmp# ps
@@ -433,7 +428,6 @@
     174 admin     1292 S    protect_srv
     175 admin     1292 S    protect_srv
     ```
-
 
     ```
     admin@RT-AC1200G+:/tmp# find / -name protect_srv
@@ -443,7 +437,6 @@
     ```
     scp /usr/sbin/protect_srv p4@192.168.2.154:/home/p4/protect_srv
     ```
-
 
     ```
     admin@RT-AC1200G+:/tmp# ./busybox-armv7l strings /usr/sbin/protect_srv
@@ -593,12 +586,10 @@
     [...SNIP...]
     ```
 
-
-
     Part 2, enumeration, exfil and analysis....
 
 
-## [0.x] References / Resources
+## [0.9] References / Resources
     [0] https://cdn.sparkfun.com/assets/learn_tutorials/1/5/9/5/GPIO.png
     [1] https://www.electronicwings.com/raspberry-pi/raspberry-pi-uart-communication-using-python-and-c
     [2] https://www.foxnetwork.ru/index.php/36-reviews/reviews/221-asus-rt-ac1200g 
