@@ -158,15 +158,13 @@
 
                 Setup initial project directory
 <pre>
-<code class="c">
-mkdir example_driver_root & cd example_driver_root & git clone https://github.com/SergiusTheBest/FindWDK.git & mkdir example_driver
+<code class="c">mkdir example_driver_root & cd example_driver_root & git clone https://github.com/SergiusTheBest/FindWDK.git & mkdir example_driver
 </code>
 </pre>
 
 example_driver_root\CMakeLists.txt
 <pre>
-<code class="c">
-cmake_minimum_required(VERSION 3.15)
+<code class="c">cmake_minimum_required(VERSION 3.15)
 project(example_driver_demo)
 set_property(GLOBAL PROPERTY USER_FOLDERS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
@@ -179,8 +177,7 @@ add_subdirectory(example_driver)
 
 example_driver_root\example_driver\example_driver.c
 <pre>
-<code class="c">
-#include &lt;wdm.h&gt;
+<code class="c">#include &lt;wdm.h&gt;
 
 DRIVER_UNLOAD driverUnload;
 VOID driverUnload(_In_ PDRIVER_OBJECT driverObject){
@@ -202,8 +199,7 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_STRING regi
 
 example_driver_root\example_driver\CMakeLists.txt
 <pre>
-<code class="c">
-cmake_minimum_required(VERSION 3.15)
+<code class="c">cmake_minimum_required(VERSION 3.15)
     wdk_add_driver(example_driver
     example_driver.c
 )
@@ -212,8 +208,7 @@ cmake_minimum_required(VERSION 3.15)
 
 Directory structure should be as follows:
 <pre>
-<code class="c">
-Z:\DRV-RESEARCH\example_driver_root>tree /A /F
+<code class="c">Z:\DRV-RESEARCH\example_driver_root>tree /A /F
 Folder PATH listing for volume WD_Blue
 Volume serial number is A1D4-1337
 Z:.
@@ -234,15 +229,13 @@ Z:.
 
 launch_vis.bat
 <pre>
-<code class="bat">
-%comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+<code class="bat">%comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
 </code>
 </pre>
 
 build.bat
 <pre>
-<code class="bat">
-@echo off
+<code class="bat">@echo off
 if exist build\ (
     echo "[INFO] build directory exists, using existing build directory"
     cd build\
@@ -260,8 +253,7 @@ cd ..\
 
 Build output should be as follows
 <pre>
-<code class="bat">
-Z:\DRV-RESEARCH\example_driver_root>build.bat
+<code class="bat">Z:\DRV-RESEARCH\example_driver_root>build.bat
 "[INFO] build directory doesn't exist, making new build directory"
 -- The C compiler identification is MSVC 19.29.30145.0
 -- The CXX compiler identification is MSVC 19.29.30145.0
