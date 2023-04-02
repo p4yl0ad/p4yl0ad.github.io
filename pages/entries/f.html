@@ -157,12 +157,15 @@
                 </p>
 
                 Setup initial project directory
-<pre><code class="c">
+<pre>
+<code class="c">
 mkdir example_driver_root & cd example_driver_root & git clone https://github.com/SergiusTheBest/FindWDK.git & mkdir example_driver
-</code></pre>
+</code>
+</pre>
 
 example_driver_root\CMakeLists.txt
-<pre><code class="c">
+<pre>
+<code class="c">
 cmake_minimum_required(VERSION 3.15)
 project(example_driver_demo)
 set_property(GLOBAL PROPERTY USER_FOLDERS ON)
@@ -171,10 +174,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /WX")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../FindWDK/cmake")
 find_package(WDK REQUIRED)
 add_subdirectory(example_driver)
-</code></pre>
+</code>
+</pre>
 
-                example_driver_root\example_driver\example_driver.c
-<pre><code class="c">
+example_driver_root\example_driver\example_driver.c
+<pre>
+<code class="c">
 #include &lt;wdm.h&gt;
 
 DRIVER_UNLOAD driverUnload;
@@ -192,18 +197,22 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_STRING regi
     driverObject->DriverUnload = driverUnload;
     return STATUS_SUCCESS;
 }
-</code></pre>
+</code>
+</pre>
 
 example_driver_root\example_driver\CMakeLists.txt
-<pre><code class="c">
+<pre>
+<code class="c">
 cmake_minimum_required(VERSION 3.15)
     wdk_add_driver(example_driver
     example_driver.c
 )
-</code></pre>
+</code>
+</pre>
 
 Directory structure should be as follows:
-<pre><code class="c">
+<pre>
+<code class="c">
 Z:\DRV-RESEARCH\example_driver_root>tree /A /F
 Folder PATH listing for volume WD_Blue
 Volume serial number is A1D4-1337
@@ -220,15 +229,19 @@ Z:.
     |
     \---cmake
         FindWdk.cmake
-</code></pre>
+</code>
+</pre>
 
 launch_vis.bat
-<pre><code class="bat">
+<pre>
+<code class="bat">
 %comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
-</code></pre>
+</code>
+</pre>
 
 build.bat
-<pre><code class="bat">
+<pre>
+<code class="bat">
 @echo off
 if exist build\ (
     echo "[INFO] build directory exists, using existing build directory"
@@ -242,10 +255,12 @@ cmake -G Ninja ..
 cmake --build . --config Debug
 cd ..\
 @echo on
-</code></pre>
+</code>
+</pre>
 
 Build output should be as follows
-<pre><code class="bat">
+<pre>
+<code class="bat">
 Z:\DRV-RESEARCH\example_driver_root>build.bat
 "[INFO] build directory doesn't exist, making new build directory"
 -- The C compiler identification is MSVC 19.29.30145.0
@@ -267,7 +282,8 @@ Z:\DRV-RESEARCH\example_driver_root>build.bat
 -- Generating done
 -- Build files have been written to: Z:/DRV-RESEARCH/example_driver_root/build
 [6/6] Linking C executable example_va_to_pa\example_va_to_pa.sys
-</code></pre>
+</code>
+</pre>
             <tr><td><span class="title">Resources to read</span>
                 <ul>
                     <li>https://github.com/SergiusTheBest/FindWDK</li>
