@@ -128,8 +128,6 @@
     <!-- <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script> -->
 </head>
 
-
-
 <!-- https://stackoverflow.com/questions/34532476/showing-c-sharp-summary-tags-in-jekyll-github-pages-using-highlight-js -->
 <!--Add Highlight.js https://highlightjs.org/download/ -->
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.0.0/styles/default.min.css">
@@ -139,8 +137,6 @@
 <script>
   hljs.initHighlightingOnLoad();
 </script>
-
-
 
 <body>
 <div class="wrapper">
@@ -156,15 +152,12 @@
                     visual studio is bloat, cmake and FindWDK allows for easy WDM driver compilation on the commandline
                 </p>
 
-                Setup initial project directory
-<pre>
-<code class="c">mkdir example_driver_root & cd example_driver_root & git clone https://github.com/SergiusTheBest/FindWDK.git & mkdir example_driver
-</code>
-</pre>
+Setup initial project directory
+<pre><code class="c">mkdir example_driver_root & cd example_driver_root & git clone https://github.com/SergiusTheBest/FindWDK.git & mkdir example_driver
+</code></pre>
 
 example_driver_root\CMakeLists.txt
-<pre>
-<code class="c">cmake_minimum_required(VERSION 3.15)
+<pre><code class="c">cmake_minimum_required(VERSION 3.15)
 project(example_driver_demo)
 set_property(GLOBAL PROPERTY USER_FOLDERS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
@@ -172,12 +165,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /WX")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../FindWDK/cmake")
 find_package(WDK REQUIRED)
 add_subdirectory(example_driver)
-</code>
-</pre>
+</code></pre>
 
 example_driver_root\example_driver\example_driver.c
-<pre>
-<code class="c">#include &lt;wdm.h&gt;
+<pre><code class="c">#include &lt;wdm.h&gt;
 
 DRIVER_UNLOAD driverUnload;
 VOID driverUnload(_In_ PDRIVER_OBJECT driverObject){
@@ -194,21 +185,17 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT driverObject, _In_ PUNICODE_STRING regi
     driverObject->DriverUnload = driverUnload;
     return STATUS_SUCCESS;
 }
-</code>
-</pre>
+</code></pre>
 
 example_driver_root\example_driver\CMakeLists.txt
-<pre>
-<code class="c">cmake_minimum_required(VERSION 3.15)
+<pre><code class="c">cmake_minimum_required(VERSION 3.15)
     wdk_add_driver(example_driver
     example_driver.c
 )
-</code>
-</pre>
+</code></pre>
 
 Directory structure should be as follows:
-<pre>
-<code class="c">Z:\DRV-RESEARCH\example_driver_root>tree /A /F
+<pre><code class="c">Z:\DRV-RESEARCH\example_driver_root>tree /A /F
 Folder PATH listing for volume WD_Blue
 Volume serial number is A1D4-1337
 Z:.
@@ -224,18 +211,14 @@ Z:.
     |
     \---cmake
         FindWdk.cmake
-</code>
-</pre>
+</code></pre>
 
 launch_vis.bat
-<pre>
-<code class="bat">%comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
-</code>
-</pre>
+<pre><code class="bat">%comspec% /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+</code></pre>
 
 build.bat
-<pre>
-<code class="bat">@echo off
+<pre><code class="bat">@echo off
 if exist build\ (
     echo "[INFO] build directory exists, using existing build directory"
     cd build\
@@ -248,12 +231,10 @@ cmake -G Ninja ..
 cmake --build . --config Debug
 cd ..\
 @echo on
-</code>
-</pre>
+</code></pre>
 
 Build output should be as follows
-<pre>
-<code class="bat">Z:\DRV-RESEARCH\example_driver_root>build.bat
+<pre><code class="bat">Z:\DRV-RESEARCH\example_driver_root>build.bat
 "[INFO] build directory doesn't exist, making new build directory"
 -- The C compiler identification is MSVC 19.29.30145.0
 -- The CXX compiler identification is MSVC 19.29.30145.0
@@ -274,14 +255,13 @@ Build output should be as follows
 -- Generating done
 -- Build files have been written to: Z:/DRV-RESEARCH/example_driver_root/build
 [6/6] Linking C executable example_va_to_pa\example_va_to_pa.sys
-</code>
-</pre>
+</code></pre>
             <tr><td><span class="title">Resources to read</span>
                 <ul>
-                    <li>https://github.com/SergiusTheBest/FindWDK</li>
-                    <li>https://manurautela.github.io/driver,/wdk,/cmake,/build,/windows/building-windows-driver-with-cmake-and-wdk-cmdline/</li>
-                    <li>https://go.microsoft.com/fwlink/?linkid=2128854</li>
-                    <li>https://github.com/build-cpp/cmkr/blob/bcbc9d2b20827322b4248772156f347356e62514/tests/driver/cmake.toml</li>
+                    <a href="https://github.com/SergiusTheBest/FindWDK">FindWDK</a></li>
+                    <a href="https://manurautela.github.io/driver,/wdk,/cmake,/build,/windows/building-windows-driver-with-cmake-and-wdk-cmdline/">manurautela cmake FindWDK guide/reference</a></li>
+                    <a href="https://go.microsoft.com/fwlink/?linkid=2128854">wdksetup.exe</a></li>
+                    <a href="https://github.com/build-cpp/cmkr/blob/bcbc9d2b20827322b4248772156f347356e62514/tests/driver/cmake.toml">cmkr cmake.toml WDM example</a></li>
                 </ul>
             </td></tr>
         </table>
