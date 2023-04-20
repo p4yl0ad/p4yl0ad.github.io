@@ -147,21 +147,109 @@
             <hr />
         </div>
         <table style="padding-left:20px;">
-            <tr><td><span class="title">Forward</span>
+                
+            
+            <tr><td><span class="title">Table of contents:</span>
+                <dl>
+                    <dt>Background info</dt>
+                    <dd>- About Portable Executables</dd>
+                    <dd>- Driver type theory</dd>
+                    <dt>Using cmake for building a WDM driver</dt>
+                    <dd>- Setting up the project</dd>
+                    <dd>- CLI Compilation of WDM driver</dd>
+                    <dt>Testing the driver</dt>
+                    <dd>- KDNET setup</dd>
+                    <dd>- Loading the driver</dd>
+                </dl>
+            </td></tr>
+                
+                
+            <tr><td><span class="title">Background info</span>
                 <p>
-Table of contents:
-    1) Background info
-        1) About Portable Executables
-        2) Driver type theory
-    2) Using cmake for building a WDM driver
-        1) Setting up the project
-        2) CLI Compilation of WDM driver
-    3) testing the driver
-        1) KDNET setup
-        2) Loading the driver
+                    Most of the experience when working with windows is in user-mode, however kernel-mode is a major part of using the operating system. 
+                    One notable area is PnP (Plug and Play) which will be skimmed over to provide some insight.
+                    When you plug in your fancy gaming mouse, your system will somehow know how to find and install a driver for that device. 
+                    PnP detects the device type and will query and install a driver to support and interface with the device. These drivers need 
+                    direct access to the hardware and as a result run in privilege rings higher than a regular user's context.
+                    The general process for this plug in -> installation is as follows:
+                    When a bus driver reports a new device, windows queries information about the device in order to identify the device in the form 
+                    of HWIDs (Hardware IDs).
+                    Once the HWID is obtained by the bus driver a driver package is searched for on disk, if this is not found the system searches for 
+                    the driver package from the driver store. If no applicable driver is identified it will try and use a universal driver for that device 
+                    type which features minimal functionality. If none of the criteria have been met then the device will require manual installation of a 
+                    driver. (Think CDs with old &lt; 2010/15 motherboards).
                 </p>
+            </td></tr>
+
+            <tr><td><span class="title">About Portable Executables</span>
+                <p>
+                    Windows .sys drivers are portable executables (PEs) too!
+                    Executables .exe, dynamic-link libraries .dll and drivers .sys files are all PEs. (screensavers are portable executables too but not 
+                    going to go into that now, RIP ltt 2023)
+                    
+                    Commonly the PE layout encompasses the following structures and is very similar across the types of PE:
+                    
+                <dl>
+                    Dos Header - DOS .EXE header
+                    Nt Header
+                    File Header
+                    Optional Header
+                    Data Directories [x]
+                    Section Headers [x]
+                    Import Directory
+                    Exception Directory
+                    Relocation Directory
+                    Debug Directory
+                    This can be seen by using Ntcore's CFF Explorer.
+                    CFF explorer
+                </dl>
+                    
+                    Further information about these structures can be read on the MSDN.
+                    Portable Executable format
+                    
+                    Or the Microsoft header file for the structs can be found here (line 18243-20699 for v10.0.22000.0 WDK in this example):
+                    
+                    C:\Program Files (x86)\Windows Kits\10\Include\10.0.22000.0\um\winnt.h
+                </p>
+            </td></tr>
 
 
+
+
+            
+
+
+
+
+
+
+
+            <tr><td><span class="title">Driver type theory</span>
+                <p>
+                    KDMF, WDM, and WDF are different types of Windows drivers that are used to facilitate communication between hardware devices and the 
+                    Windows operating system.
+
+                    KDMF stands for Kernel-Mode Driver Framework, which is a high-level driver framework that simplifies driver development by providing 
+                    a set of libraries and tools for creating kernel-mode drivers. It is a newer framework compared to WDM and WDF and is designed to 
+                    support the latest versions of Windows.
+                    WDM stands for Windows Driver Model, which is a driver framework that was introduced with Windows 98. WDM drivers are capable of 
+                    running in kernel-mode and user-mode and support a wide range of hardware devices.
+                    WDF stands for Windows Driver Framework, which is a set of libraries and tools that simplifies driver development by providing a 
+                    high-level object-oriented programming model for creating kernel-mode drivers. It is a newer framework compared to WDM and is designed 
+                    to support the latest versions of Windows.
+                    KDMF and WDF are both higher-level frameworks that simplify driver development, while WDM is a lower-level framework that has been 
+                    around for longer and supports a wider range of devices.
+                </p>
+            </td></tr>
+
+
+            <tr><td><span class="title">Using cmake for building a WDM driver</span>
+                <p>
+                    
+                </p>
+            </td></tr>
+
+                
             <tr><td><span class="title">Resources to read</span>
                 <ul>
                     <li><a href="https://github.com/SergiusTheBest/FindWDK">FindWDK</a></li>
@@ -172,7 +260,6 @@ Table of contents:
             </td></tr>
         </table>
     </div>
-
     <div class="footer" onclick="document.getElementById('profile_link').click();">
         <a id="profile_link" target="_blank" href="https://github.com/p4yl0ad">GitHub</a>
         <a id="profile_link" target="_blank" href="https://twitter.com/PUNICODE_STRING">Twitter</a>
