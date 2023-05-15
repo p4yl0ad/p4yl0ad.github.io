@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Expandable Textbox Example</title>
+  <style>
+    .textbox {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    
+    .textbox-header {
+      cursor: pointer;
+    }
+    
+    .textbox-content {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="textbox">
+    <div class="textbox-header" onclick="toggleText()">Click to expand</div>
+    <div class="textbox-content">
+      <p>Your text goes here</p>
+    </div>
+  </div>
+
+  <script>
+    function toggleText() {
+      var content = document.querySelector('.textbox-content');
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        document.querySelector('.textbox-header').innerHTML = 'Click to hide';
+      } else {
+        content.style.display = 'none';
+        document.querySelector('.textbox-header').innerHTML = 'Click to expand';
+      }
+    }
+  </script>
+</body>
+</html>

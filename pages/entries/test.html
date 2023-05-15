@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 
 <meta name="viewport" content="width=device-width">
 
@@ -322,3 +322,73 @@ Inspiration from here https://glenwing.github.io/
 </html>
 
 -->
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .textbox {
+      border: 1px solid #ccc;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .textbox-header {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    
+    .textbox-preview {
+      display: inline-block;
+      background-color: #f1f1f1;
+      padding: 5px;
+      margin-right: 10px;
+      font-size: 14px;
+      color: #333;
+    }
+    
+    .textbox-content {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="textbox">
+    <div class="textbox-header" onclick="toggleText(event)">
+      <div class="textbox-preview">Preview of text 1 goes here</div>
+      Click to expand
+    </div>
+    <div class="textbox-content">
+      <p>Your full text 1 goes here</p>
+    </div>
+  </div>
+
+  <div class="textbox">
+    <div class="textbox-header" onclick="toggleText(event)">
+      <div class="textbox-preview">Preview of text 2 goes here</div>
+      Click to expand
+    </div>
+    <div class="textbox-content">
+      <p>Your full text 2 goes here</p>
+    </div>
+  </div>
+
+  <script>
+    function toggleText(event) {
+      var content = event.currentTarget.nextElementSibling;
+      content.style.display = (content.style.display === "none") ? "block" : "none";
+    }
+    
+    var headers = document.querySelectorAll(".textbox-header");
+    headers.forEach(function(header) {
+      header.addEventListener("click", toggleText);
+    });
+  </script>
+
+</body>
+</html>

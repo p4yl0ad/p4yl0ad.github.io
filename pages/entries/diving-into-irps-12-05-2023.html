@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width">
+<style>
+    html,
+    body {
+	margin:             0;
+	height:             100%;
+	padding:            0;
+	-webkit-font-smoothing: subpixel-antialiased;
+	-moz-osx-font-smoothing: grayscale;
+    }
+	
+    body {
+	font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+	font-size:          15px;
+	line-height:        120%;
+	min-height:         100%;
+	overflow-y:         scroll;
+    }
+	
+    .number {
+	font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+	font-size:          15px;
+    }
+	
+    div.wrapper {
+	min-height:         100%;
+	position:           relative;
+    }
+	
+    div.main {
+	border:             0px solid transparent;
+	font-size:          15px;
+	padding-bottom:     48px;
+	margin-left:        auto;
+	margin-right:       auto;
+    }
+	
+    div.footer {
+	width:              100%;
+	position:           absolute;
+	bottom:             0;
+	left:               0;
+	vertical-align:     middle;
+	background-color:   #DDDDDD;
+	cursor:             pointer;
+	min-width:          512px;
+	padding-top:        10px;
+	padding-bottom:     10px;
+	font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+	font-size:          15px;
+    }
+    div.footer a {
+	color:              #888888;
+	text-decoration:    none;
+	vertical-align:     middle;
+	padding:            10px;
+    }
+	
+    div.header {
+	font-family:        "Consolas", "Inconsolata", "Lucida Console", Monospace;
+	line-height:        120%;
+	font-weight:        bold;
+	font-size:          16px;
+	padding-left:       16px;
+	padding-right:      16px;
+	padding-top:        12px;
+	padding-bottom:     0px;
+	min-width:          480px;
+    }
+    div.header a {
+	cursor:             pointer;
+	text-decoration:    none;
+	color:              #000000;
+    }
+    div.header i.back_arrow {
+	transform:rotate(90deg) scale(0.75);
+	line-height:0;
+	position:relative;
+	bottom:-0.2em;
+    }
+	
+    span.title {
+	font-weight:bold;
+    }
+	
+    table, tr, td {
+	padding:4px;
+	border: 0px solid transparent;
+    }
+	
+    a:link {
+	color:#777777;
+	text-decoration:none;
+    }
+    a:visited {
+	color:#777777;
+	text-decoration:none;
+    }
+    a:hover {
+	color:#000000;
+	text-decoration:underline;
+    }
+    a:active {
+	color:#000000;
+	text-decoration:underline;
+    }
+	
+    hr {
+	height:             1px;
+	border-width:       0;
+	color:              #888888;
+	background-color:   #888888;
+    }
+	
+	
+
+    .textbox {
+      border: 1px solid #ccc;
+      padding: 10px;
+	  width: 100%;
+	  box-sizing: border-box;
+    }
+    
+    .textbox-header {
+      cursor: pointer;
+    }
+    
+    .textbox-content {
+      display: none;
+    }
+</style>
+
+<html>
+	<head>
+		<title>Understanding and tracking IRPs in WinDbg</title>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
+	</head>
+	
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.0.0/styles/default.min.css">
+	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.0.0/highlight.min.js"></script>
+	<!-- Using Highight.js https://highlightjs.org/usage/-->
+	
+	<script>
+		hljs.initHighlightingOnLoad();
+	</script>
+	
+	<script>
+		function toggleText() {
+			var content = document.querySelector('.textbox-content');
+			if (content.style.display === 'none') {
+				content.style.display = 'block';
+				document.querySelector('.textbox-header').innerHTML = 'Click to hide';
+			} else {
+				content.style.display = 'none';
+				document.querySelector('.textbox-header').innerHTML = 'Click to expand';
+			}
+		}					
+
+							// USAGE:
+							//<div class="textbox">
+							//	<div class="textbox-header" onclick="toggleText()">Click to expand</div>
+							//	<div class="textbox-content">
+							//		<p>Your text goes here</p>
+							//</div>
+							//</div>
+  </script>
+	
+	<body>
+		<div class="wrapper">
+			<div class="main">
+				<div class="header">
+					<a href="../../index.html">
+					<i class="material-icons back_arrow">subdirectory_arrow_left</i>&nbsp;Understanding and tracking IRPs in WinDbg</a>
+					<hr/>
+				</div>
+				<table style="padding-left:20px;">
+					<tr>
+						<td>
+							<span class="title">Introduction</span>
+							<p align=left>
+								I was curious at how Input/Output (I/O) Request Packets (IRPs) are processed when an I/O operation gets carried out. 
+								
+								The following notes show how the ntdll!NtCreateFile and ntdll!NtWriteFile NTAPI calls result in an IRP being passed to ntfs.sys
+							</p>
+							
+							<span class="title">Windows I/O model operation</span>
+							<p>
+							The subsystem calls an I/O system service to open a named file and the following high level steps are taken:
+							</p>
+								<ul>
+									<li>Lookup of the named file and checks access rights.</li>
+									<li>Temporary suspension of the request if the volume is not mounted, and calls file systems until one recognizes the file object.</li>
+									<li>Allocation and initialization of an IRP for the open request.</li>
+									<li>FS driver accesses the IRP and sets up the next-lower driver's I/O stack location in the IRP.</li>
+									<li>Both drivers process the IRP and complete the requested I/O operation, calling kernel-mode support routines supplied by the I/O manager and other system components.</li>
+									<li>The drivers return the IRP to the I/O manager with the I/O status block set to indicate success or failure.</li>
+									<li>The I/O manager gets the I/O status from the IRP and returns status information to the subsystem.</li>
+									<li>The I/O manager frees the completed IRP.</li>
+									<li>The I/O manager returns a handle to the subsystem and an NTSTATUS or just an NTSTATUS.</li>
+								</ul>
+							
+							<br>
+							<span class="title">What is an IRP?</span>
+							<p>
+								In the context of the Windows I/O manager, an I/O Request Packet (IRP) is a data structure that represents an I/O request initiated by a thread in the system. It contains information about the I/O operation, such as the type of operation, the device to which the operation is targeted, the buffer in which data is to be transferred, and any other parameters relevant to the operation.
+							</p>
+							<p>
+								When a thread makes an I/O request, the I/O manager constructs an IRP to represent the operation as it moves through the I/O system. The IRP is used by the I/O manager to track the progress of the request and to store information that the I/O system needs to process the request. The I/O manager also uses IRPs to communicate with device drivers and to manage the flow of I/O requests across the system.
+							</p>
+							<p>
+								IRPs can be allocated from one of several IRP look-aside lists, which are optimized for specific types of I/O operations. The I/O manager also maintains global look-aside lists to ensure efficient cross-CPU IRP flow. If an IRP requires more stack locations than are available in the look-aside lists, the I/O manager will allocate the IRP from non-paged pool.
+							</p>
+							<p>
+								IRPs allow threads to initiate I/O requests and provide a structured mechanism for tracking the progress of I/O requests through the system.
+								
+							</p>
+							
+							
+							<br>
+							<span class="title">Microsoft documentation IRP typedef</span>
+							<br>
+							<pre><code class="c">typedef struct _IRP {
+  CSHORT                    Type;						// IO_TYPE_IRP
+  USHORT                    Size;						
+  PMDL                      MdlAddress;						// Pointer to an MDL describing a user buffer, if the driver is using direct I/O, and the IRP major function code is one of the following:
+/*
+IRP_MJ_READ:
+The MDL describes an empty buffer that the device or driver fills in.
+
+IRP_MJ_WRITE:
+The MDL describes a buffer that contains data for the device or driver.
+
+IRP_MJ_DEVICE_CONTROL or IRP_MJ_INTERNAL_DEVICE_CONTROL
+If the IOCTL code specifies the METHOD_IN_DIRECT transfer type, the MDL describes a buffer that contains data for the device or driver.
+If the IOCTL code specifies the METHOD_OUT_DIRECT transfer type, the MDL describes an empty buffer that the device or driver fills in.
+
+For more information about the buffers that are associated with METHOD_IN_DIRECT and METHOD_OUT_DIRECT transfer types in IOCTL codes, see Buffer Descriptions for I/O Control Codes.
+
+If the driver is not using direct I/O, this pointer is NULL.
+*/
+  
+  ULONG                     Flags;			
+/*
+File system drivers use this field, which is read-only for all drivers. Network and, possibly, highest-level device drivers also might read this field. This field is set either to zero or to the bitwise-OR of one or more of the following system-defined flag bits:
+
+#define IRP_NOCACHE               0x0001
+#define IRP_PAGING_IO             0x0002
+#define IRP_MOUNT_COMPLETION      0x0002
+#define IRP_SYNCHRONOUS_API       0x0004
+#define IRP_ASSOCIATED_IRP        0x0008
+#define IRP_BUFFERED_IO           0x0010
+#define IRP_DEALLOCATE_BUFFER     0x0020
+#define IRP_INPUT_OPERATION       0x0040
+#define IRP_SYNCHRONOUS_PAGING_IO 0x0040
+#define IRP_CREATE_OPERATION      0x0080
+#define IRP_READ_OPERATION        0x0100
+#define IRP_WRITE_OPERATION       0x0200
+#define IRP_CLOSE_OPERATION       0x0400
+#define IRP_DEFER_IO_COMPLETION   0x0800
+#define IRP_OB_QUERY_NAME         0x1000
+#define IRP_HOLD_DEVICE_QUEUE     0x2000
+*/
+
+  union {
+    struct _IRP     *MasterIrp;							// Pointer to the master IRP in an IRP that was created by a highest-level driver
+    __volatile LONG IrpCount;							
+    PVOID           SystemBuffer;						// Pointer to a system-space buffer. (Dependant on IRP major function code)
+  } AssociatedIrp;
+  LIST_ENTRY                ThreadListEntry;					// _LIST_ENTRY structure whos flink points to the ThreadListEntry of the ETHREAD
+  IO_STATUS_BLOCK           IoStatus;						// Contains the IO_STATUS_BLOCK structure 
+  KPROCESSOR_MODE           RequestorMode;					// Indicates the execution mode of the OG requester of the operation, UserMode or KernelMode.
+  BOOLEAN                   PendingReturned;					// If set to TRUE, a driver has marked the IRP pending. IoCompletion check the value of this flag.
+  CHAR                      StackCount;						// indicates the number of stack locations which have been allocated to the IRP.
+  CHAR                      CurrentLocation;					// indicates which I/O stack location is currently active
+  BOOLEAN                   Cancel;						// If set to TRUE, the IRP either is or should be canceled.
+  KIRQL                     CancelIrql;						// Contains the IRQL at which a driver is running when IoAcquireCancelSpinLock is called.
+  CCHAR                     ApcEnvironment;
+  UCHAR                     AllocationFlags;
+  union {
+    PIO_STATUS_BLOCK UserIosb;
+    PVOID            IoRingContext;
+  };
+  PKEVENT                   UserEvent;
+  union {
+    struct {
+      union {
+        PIO_APC_ROUTINE UserApcRoutine;
+        PVOID           IssuingProcess;
+      };
+      union {
+        PVOID                 UserApcContext;
+#if ...
+        _IORING_OBJECT        *IoRing;
+#else
+        struct _IORING_OBJECT *IoRing;
+#endif
+      };
+    } AsynchronousParameters;
+    LARGE_INTEGER AllocationSize;
+  } Overlay;
+  __volatile PDRIVER_CANCEL CancelRoutine;					// driver-supplied Cancel routine if the IRP is canceled. NULL = IRP is not currently cancelable.
+  PVOID                     UserBuffer;						// Contains the address of an output buffer if both of the following conditions apply:
+  /*
+
+	The major function code in the I/O stack location is IRP_MJ_DEVICE_CONTROL or IRP_MJ_INTERNAL_DEVICE_CONTROL.
+	The I/O control code was defined with METHOD_NEITHER or METHOD_BUFFERED.
+
+	For METHOD_BUFFERED, the driver should use the buffer pointed to by Irp->AssociatedIrp.SystemBuffer as the output buffer. 
+	When the driver completes the request, the I/O manager copies the contents of this buffer to the output buffer that is pointed to by Irp->UserBuffer. 
+	The driver should not write directly to the buffer pointed to by Irp->UserBuffer. For more information, see Buffer Descriptions for I/O Control Codes. 
+	
+*/
+  union {
+    struct {
+      union {
+        KDEVICE_QUEUE_ENTRY DeviceQueueEntry;
+        struct {
+          PVOID DriverContext[4];
+        };
+      };
+      PETHREAD     Thread;
+      PCHAR        AuxiliaryBuffer;
+      struct {
+        LIST_ENTRY ListEntry;
+        union {
+          struct _IO_STACK_LOCATION *CurrentStackLocation;
+          ULONG                     PacketType;
+        };
+      };
+      PFILE_OBJECT OriginalFileObject;
+    } Overlay;
+    KAPC  Apc;
+    PVOID CompletionKey;
+  } Tail;
+} IRP;</code></pre>
+							
+							<span class="title">NT 5.1 (XP SP1 IRP struct typedef)</span>
+							
+							<p>
+							The following struct has far more comments and a better description for each member so I suggest having a skim over it.
+							</p>
+							
+							<div class="textbox">
+								<div class="textbox-header" onclick="toggleText()">Click to expand</div>
+								<div class="textbox-content">
+									<pre><code class="c">typedef struct _IRP {
+    CSHORT Type;
+    USHORT Size;
+
+    //
+    // Define the common fields used to control the IRP.
+    //
+
+    //
+    // Define a pointer to the Memory Descriptor List (MDL) for this I/O
+    // request.  This field is only used if the I/O is &quot;direct I/O&quot;.
+    //
+
+    PMDL MdlAddress;
+
+    //
+    // Flags word - used to remember various flags.
+    //
+
+    ULONG Flags;
+
+    //
+    // The following union is used for one of three purposes:
+    //
+    //    1. This IRP is an associated IRP.  The field is a pointer to a master
+    //       IRP.
+    //
+    //    2. This is the master IRP.  The field is the count of the number of
+    //       IRPs which must complete (associated IRPs) before the master can
+    //       complete.
+    //
+    //    3. This operation is being buffered and the field is the address of
+    //       the system space buffer.
+    //
+
+    union {
+        struct _IRP *MasterIrp;
+        LONG IrpCount;
+        PVOID SystemBuffer;
+    } AssociatedIrp;
+
+    //
+    // Thread list entry - allows queueing the IRP to the thread pending I/O
+    // request packet list.
+    //
+
+    LIST_ENTRY ThreadListEntry;
+
+    //
+    // I/O status - final status of operation.
+    //
+
+    IO_STATUS_BLOCK IoStatus;
+
+    //
+    // Requestor mode - mode of the original requestor of this operation.
+    //
+
+    KPROCESSOR_MODE RequestorMode;
+
+    //
+    // Pending returned - TRUE if pending was initially returned as the
+    // status for this packet.
+    //
+
+    BOOLEAN PendingReturned;
+
+    //
+    // Stack state information.
+    //
+
+    CHAR StackCount;
+    CHAR CurrentLocation;
+
+    //
+    // Cancel - packet has been canceled.
+    //
+
+    BOOLEAN Cancel;
+
+    //
+    // Cancel Irql - Irql at which the cancel spinlock was acquired.
+    //
+
+    KIRQL CancelIrql;
+
+    //
+    // ApcEnvironment - Used to save the APC environment at the time that the
+    // packet was initialized.
+    //
+
+    CCHAR ApcEnvironment;
+
+    //
+    // Allocation control flags.
+    //
+
+    UCHAR AllocationFlags;
+
+    //
+    // User parameters.
+    //
+
+    PIO_STATUS_BLOCK UserIosb;
+    PKEVENT UserEvent;
+    union {
+        struct {
+            PIO_APC_ROUTINE UserApcRoutine;
+            PVOID UserApcContext;
+        } AsynchronousParameters;
+        LARGE_INTEGER AllocationSize;
+    } Overlay;
+
+    //
+    // CancelRoutine - Used to contain the address of a cancel routine supplied
+    // by a device driver when the IRP is in a cancelable state.
+    //
+
+    PDRIVER_CANCEL CancelRoutine;
+
+    //
+    // Note that the UserBuffer parameter is outside of the stack so that I/O
+    // completion can copy data back into the user&apos;s address space without
+    // having to know exactly which service was being invoked.  The length
+    // of the copy is stored in the second half of the I/O status block. If
+    // the UserBuffer field is NULL, then no copy is performed.
+    //
+
+    PVOID UserBuffer;
+
+    //
+    // Kernel structures
+    //
+    // The following section contains kernel structures which the IRP needs
+    // in order to place various work information in kernel controller system
+    // queues.  Because the size and alignment cannot be controlled, they are
+    // placed here at the end so they just hang off and do not affect the
+    // alignment of other fields in the IRP.
+    //
+
+    union {
+
+        struct {
+
+            union {
+
+                //
+                // DeviceQueueEntry - The device queue entry field is used to
+                // queue the IRP to the device driver device queue.
+                //
+
+                KDEVICE_QUEUE_ENTRY DeviceQueueEntry;
+
+                struct {
+
+                    //
+                    // The following are available to the driver to use in
+                    // whatever manner is desired, while the driver owns the
+                    // packet.
+                    //
+
+                    PVOID DriverContext[4];
+
+                } ;
+
+            } ;
+
+            //
+            // Thread - pointer to caller&apos;s Thread Control Block.
+            //
+
+            PETHREAD Thread;
+
+            //
+            // Auxiliary buffer - pointer to any auxiliary buffer that is
+            // required to pass information to a driver that is not contained
+            // in a normal buffer.
+            //
+
+            PCHAR AuxiliaryBuffer;
+
+            //
+            // The following unnamed structure must be exactly identical
+            // to the unnamed structure used in the minipacket header used
+            // for completion queue entries.
+            //
+
+            struct {
+
+                //
+                // List entry - used to queue the packet to completion queue, among
+                // others.
+                //
+
+                LIST_ENTRY ListEntry;
+
+                union {
+
+                    //
+                    // Current stack location - contains a pointer to the current
+                    // IO_STACK_LOCATION structure in the IRP stack.  This field
+                    // should never be directly accessed by drivers.  They should
+                    // use the standard functions.
+                    //
+
+                    struct _IO_STACK_LOCATION *CurrentStackLocation;
+
+                    //
+                    // Minipacket type.
+                    //
+
+                    ULONG PacketType;
+                };
+            };
+
+            //
+            // Original file object - pointer to the original file object
+            // that was used to open the file.  This field is owned by the
+            // I/O system and should not be used by any other drivers.
+            //
+
+            PFILE_OBJECT OriginalFileObject;
+
+        } Overlay;
+
+        //
+        // APC - This APC control block is used for the special kernel APC as
+        // well as for the caller&apos;s APC, if one was specified in the original
+        // argument list.  If so, then the APC is reused for the normal APC for
+        // whatever mode the caller was in and the &quot;special&quot; routine that is
+        // invoked before the APC gets control simply deallocates the IRP.
+        //
+
+        KAPC Apc;
+
+        //
+        // CompletionKey - This is the key that is used to distinguish
+        // individual I/O operations initiated on a single file handle.
+        //
+
+        PVOID CompletionKey;
+
+    } Tail;
+
+} IRP, *PIRP;</code></pre>
+							</div>
+							</div>
+
+
+							<br>
+							<br>
+							<span class="title">ntfs!NtfsFsdWrite breakpoint to catch IRP_MJ_WRITE</span>
+							<p>
+							We know that windows typically uses NTFS so we can figure out how to track a call to NtWriteFile based off that knowledge.
+							
+							ntfs.sys is the driver which allows Windows to read and write data to New Technology File System (NTFS) formated drives, including managing files and directories, security permissions, and other aspects of the NTFS file system.
+							
+							We know that DriverDispatch routines take an pointer to an IRP as their 2nd argument so putting a breakpoint on the dispatch routine related to what we want to inspect is a good port of call.
+							</p>
+							
+							<pre><code class="jsx">DRIVER_DISPATCH DriverDispatch;
+
+NTSTATUS DriverDispatch(
+  [in, out] _DEVICE_OBJECT *DeviceObject,
+  [in, out] _IRP *Irp
+)</code></pre>
+							<br>
+							<p> 
+							We can inspect the Dispatch routines for ntfs.sys as shown below.
+							</p>
+							
+							<pre><code class="jsx">1: kd&gt; !drvobj \FileSystem\ntfs 2
+							Driver object (ffffdc0e0c405c60) is for:
+ \FileSystem\Ntfs
+
+DriverEntry:   fffff80163293010	Ntfs!GsDriverEntry
+DriverStartIo: 00000000	
+DriverUnload:  00000000	
+AddDevice:     00000000	
+
+Dispatch routines:
+[00] IRP_MJ_CREATE                      fffff801630e6460	Ntfs!NtfsFsdCreate
+[01] IRP_MJ_CREATE_NAMED_PIPE           fffff80161349b80	nt!IopInvalidDeviceRequest
+[02] IRP_MJ_CLOSE                       fffff801630e48b0	Ntfs!NtfsFsdClose
+[03] IRP_MJ_READ                        fffff8016301a070	Ntfs!NtfsFsdRead
+[04] IRP_MJ_WRITE                       fffff80163023bc0	Ntfs!NtfsFsdWrite
+[05] IRP_MJ_QUERY_INFORMATION           fffff801630e6a80	Ntfs!NtfsFsdDispatchWait
+[06] IRP_MJ_SET_INFORMATION             fffff8016313cd40	Ntfs!NtfsFsdSetInformation
+[07] IRP_MJ_QUERY_EA                    fffff801630e6a80	Ntfs!NtfsFsdDispatchWait
+[08] IRP_MJ_SET_EA                      fffff801630e6a80	Ntfs!NtfsFsdDispatchWait
+[09] IRP_MJ_FLUSH_BUFFERS               fffff80163107320	Ntfs!NtfsFsdFlushBuffers
+[0a] IRP_MJ_QUERY_VOLUME_INFORMATION    fffff80163103f30	Ntfs!NtfsFsdDispatch
+[0b] IRP_MJ_SET_VOLUME_INFORMATION      fffff80163103f30	Ntfs!NtfsFsdDispatch
+[0c] IRP_MJ_DIRECTORY_CONTROL           fffff801630e18f0	Ntfs!NtfsFsdDirectoryControl
+[0d] IRP_MJ_FILE_SYSTEM_CONTROL         fffff80163131680	Ntfs!NtfsFsdFileSystemControl
+[0e] IRP_MJ_DEVICE_CONTROL              fffff80163131500	Ntfs!NtfsFsdDeviceControl
+[0f] IRP_MJ_INTERNAL_DEVICE_CONTROL     fffff80161349b80	nt!IopInvalidDeviceRequest
+[10] IRP_MJ_SHUTDOWN                    fffff801632513f0	Ntfs!NtfsFsdShutdown
+[11] IRP_MJ_LOCK_CONTROL                fffff8016304abe0	Ntfs!NtfsFsdLockControl
+[12] IRP_MJ_CLEANUP                     fffff801630e5250	Ntfs!NtfsFsdCleanup
+[13] IRP_MJ_CREATE_MAILSLOT             fffff80161349b80	nt!IopInvalidDeviceRequest
+[14] IRP_MJ_QUERY_SECURITY              fffff80163103f30	Ntfs!NtfsFsdDispatch
+[15] IRP_MJ_SET_SECURITY                fffff80163103f30	Ntfs!NtfsFsdDispatch
+[16] IRP_MJ_POWER                       fffff80161349b80	nt!IopInvalidDeviceRequest
+[17] IRP_MJ_SYSTEM_CONTROL              fffff80161349b80	nt!IopInvalidDeviceRequest
+[18] IRP_MJ_DEVICE_CHANGE               fffff80161349b80	nt!IopInvalidDeviceRequest
+[19] IRP_MJ_QUERY_QUOTA                 fffff801630e6a80	Ntfs!NtfsFsdDispatchWait
+[1a] IRP_MJ_SET_QUOTA                   fffff801630e6a80	Ntfs!NtfsFsdDispatchWait
+[1b] IRP_MJ_PNP                         fffff80163161140	Ntfs!NtfsFsdPnp
+
+Fast I/O routines:
+FastIoCheckIfPossible                   fffff80163233620	Ntfs!NtfsFastIoCheckIfPossible
+FastIoRead                              fffff801630e4220	Ntfs!NtfsCopyReadA
+FastIoWrite                             fffff801630e39d0	Ntfs!NtfsCopyWriteA
+FastIoQueryBasicInfo                    fffff80163100830	Ntfs!NtfsFastQueryBasicInfo
+FastIoQueryStandardInfo                 fffff801630e2710	Ntfs!NtfsFastQueryStdInfo
+FastIoLock                              fffff80163102f10	Ntfs!NtfsFastLock
+FastIoUnlockSingle                      fffff80163103620	Ntfs!NtfsFastUnlockSingle
+FastIoUnlockAll                         fffff801632309c0	Ntfs!NtfsFastUnlockAll
+FastIoUnlockAllByKey                    fffff80163230c70	Ntfs!NtfsFastUnlockAllByKey
+ReleaseFileForNtCreateSection           fffff8016300cba0	Ntfs!NtfsReleaseForCreateSection
+FastIoQueryNetworkOpenInfo              fffff801630d3ed0	Ntfs!NtfsFastQueryNetworkOpenInfo
+AcquireForModWrite                      fffff80163006eb0	Ntfs!NtfsAcquireFileForModWrite
+MdlRead                                 fffff8016312e0b0	Ntfs!NtfsMdlReadA
+MdlReadComplete                         fffff8016126ca30	nt!FsRtlMdlReadCompleteDev
+PrepareMdlWrite                         fffff80163112b50	Ntfs!NtfsPrepareMdlWriteA
+MdlWriteComplete                        fffff80161711450	nt!FsRtlMdlWriteCompleteDev
+FastIoQueryOpen                         fffff801630e29a0	Ntfs!NtfsNetworkOpenCreate
+ReleaseForModWrite                      fffff80163011cc0	Ntfs!NtfsReleaseFileForModWrite
+AcquireForCcFlush                       fffff80163016e50	Ntfs!NtfsAcquireFileForCcFlush
+ReleaseForCcFlush                       fffff80163010140	Ntfs!NtfsReleaseFileForCcFlush</code></pre>
+							
+							<br>
+							<p>
+							As we are tracing NtWriteFile, IRP_MJ_WRITE, is of interest so a breakpoint can be put on ntdll!NtWriteFile and Ntfs!NtfsFsdWrite.
+							</p>
+							
+							<p>
+							To ensure we don't catch other calls to this API and routine we can use conditional breakpoints as follows:
+							</p>
+							
+							
+							
+							
+							<pre><code class="jsx">1: kd&gt; bl
+     0 e Disable Clear  fffff801`63023bc0     0001 (0001) Ntfs!NtfsFsdWrite &quot;.if (@$tpid == 0x06bc) {.echo \&quot;ayylmao NtfsFsdWrite\&quot;} .else {g};&quot;
+     1 e Disable Clear  00007ffb`3a22ce60     0001 (0001) ntdll!NtWriteFile &quot;.if (@$tpid == 0x06bc) {.echo \&quot;ayylmao NtWriteFile\&quot;} .else {g};&quot;</code></pre>
+
+							<p>
+							When these breakpoints are hit, the debugger checks if the current process ID (thread PID) (@$tpid) is equal to 0x06bc, which is the PID of the target process we are inspecting. If it is, it prints the message "okay?" to the debugger console using the .echo command. If it is not, it continues execution using the g command.
+							</p>
+
+
+							<br>
+							<span class="title">Origin process of the breakpoint hit</span>
+							<p>
+							When our kernel debugger breaks on NtWriteFile, we can continue and the next NtfsFsdWrite break should be in the context of the target process we want to inspect the IRP of.
+							</p>
+							
+							<pre><code class="jsx">1: kd&gt; !process
+PROCESS ffffdc0e14331300
+    SessionId: 1  Cid: 06bc    Peb: e03cb61000  ParentCid: 1338
+    DirBase: 493cb000  ObjectTable: ffff9b0deb51ae40  HandleCount: 502.
+    Image: FileTest.exe
+    VadRoot ffffdc0e138a2fc0 Vads 206 Clone 0 Private 1793. Modified 15251. Locked 0.
+    DeviceMap ffff9b0deb3e59d0
+    Token                             ffff9b0dec78f060
+    ElapsedTime                       07:39:31.685
+    UserTime                          00:00:00.140
+    KernelTime                        00:00:00.609
+    QuotaPoolUsage[PagedPool]         352728
+    QuotaPoolUsage[NonPagedPool]      28280
+    Working Set Sizes (now,min,max)  (2200, 50, 345) (8800KB, 200KB, 1380KB)
+    PeakWorkingSetSize                10973
+    VirtualSize                       4315 Mb
+    PeakVirtualSize                   4394 Mb
+    PageFaultCount                    49482
+    MemoryPriority                    FOREGROUND
+    BasePriority                      8
+    CommitCharge                      2849
+    Job                               ffffdc0e10da9060
+
+        THREAD ffffdc0e14317080  Cid 06bc.06c8  Teb: 000000e03cb62000 Win32Thread: ffffdc0e138a3ba0 RUNNING on processor 1
+        THREAD ffffdc0e14325080  Cid 06bc.0a78  Teb: 000000e03cb6a000 Win32Thread: 0000000000000000 WAIT: (UserRequest) UserMode Non-Alertable
+            ffffdc0e132a3ee0  SynchronizationEvent</code></pre>
+			
+			
+
+
+
+							<br>
+							<span class="title">Thread and callstack of breakpoint hit</span>
+							<pre><code class="jsx">1: kd&gt; !thread
+THREAD ffffdc0e14317080  Cid 06bc.06c8  Teb: 000000e03cb62000 Win32Thread: ffffdc0e138a3ba0 RUNNING on processor 1
+IRP List:
+    ffffdc0e12c68bd0: (0006,0430) Flags: 40060a00  Mdl: 00000000
+Not impersonating
+DeviceMap                 ffff9b0deb3e59d0
+Owning Process            ffffdc0e14331300       Image:         FileTest.exe
+Attached Process          N/A            Image:         N/A
+Wait Start TickCount      461003         Ticks: 0
+Context Switch Count      39179          IdealProcessor: 1             
+UserTime                  00:00:00.671
+KernelTime                00:00:03.234
+Win32 Start Address FileTest (0x00007ff7b4479e64)
+Stack Init fffff28443718c90 Current fffff28443718490
+Base fffff28443719000 Limit fffff28443713000 Call 0000000000000000
+Priority 12 BasePriority 8 PriorityDecrement 2 IoPriority 2 PagePriority 5
+Child-SP          RetAddr               : Args to Child                                                           : Call Site
+fffff284`43718698 fffff801`613720b7     : ffffdc0e`12c68f70 fffff801`619d31ae ffffdc0e`00000000 ffffdc0e`00000000 : Ntfs!NtfsFsdWrite
+fffff284`437186a0 fffff801`619c6f1a     : ffffdc0e`12c68bd0 ffffdc0e`0c7cf030 ffffdc0e`10d16100 00000000`00000000 : nt!IopfCallDriver+0x53
+fffff284`437186e0 fffff801`61443db1     : ffffdc0e`12bf0660 00000000`00000000 fffff284`43719000 ffffdc0e`10d159f0 : nt!IovCallDriver+0x266
+fffff284`43718720 fffff801`62396c5a     : 00000000`00000000 fffff284`437187f8 ffffdc0e`12c68bd0 ffffdc0e`13510460 : nt!IofCallDriver+0x1af711
+fffff284`43718760 fffff801`62394673     : fffff284`437187f0 00000000`00000000 00000000`00000000 00000000`00000000 : FLTMGR!FltpLegacyProcessingAfterPreCallbacksCompleted+0x28a
+fffff284`437187d0 fffff801`613720b7     : ffffdc0e`12c68bd0 fffff801`619d31ae ffffdc0e`00000001 ffffdc0e`00000000 : FLTMGR!FltpDispatch+0xa3
+fffff284`43718830 fffff801`619c6f1a     : ffffdc0e`12c68bd0 ffffdc0e`0c73dd70 ffffdc0e`12c68bd0 fffff801`619e3a7f : nt!IopfCallDriver+0x53
+fffff284`43718870 fffff801`61443db1     : ffffdc0e`12c68bd0 00000000`00000001 00000000`00000000 ffffdc0e`10d16140 : nt!IovCallDriver+0x266
+fffff284`437188b0 fffff801`6167a8f8     : 00000000`00000001 ffffdc0e`13931440 00000000`00000001 ffffdc0e`12c68fb8 : nt!IofCallDriver+0x1af711
+fffff284`437188f0 fffff801`61690b5f     : ffffdc0e`00000000 fffff284`43718b80 000000e0`3c90f0e8 fffff284`43718b80 : nt!IopSynchronousServiceTail+0x1a8
+fffff284`43718990 fffff801`6140dbb5     : ffffdc0e`14317080 00000000`000006cc 00000000`00000000 00000000`00000000 : nt!NtWriteFile+0x66f
+fffff284`43718a90 00007ffb`3a22ce74     : 00007ff7`b445c5be 000002bc`25648aa0 000002bc`204538f0 00000000`00000000 : nt!KiSystemServiceCopyEnd+0x25 (TrapFrame @ fffff284`43718b00)
+000000e0`3c90f038 00007ff7`b445c5be     : 000002bc`25648aa0 000002bc`204538f0 00000000`00000000 00007ffb`38512e08 : ntdll!NtWriteFile+0x14
+000000e0`3c90f040 00007ff7`b445cff3     : 00000000`00000010 00000000`00010000 00000000`00000000 00000000`00000000 : FileTest+0xc5be
+000000e0`3c90f0d0 00007ffb`39b828b0     : 00000000`00000001 000000e0`3c90f258 00000000`00000000 00000000`00000000 : FileTest+0xcff3
+000000e0`3c90f100 00007ffb`39b82052     : 00000000`00000000 00007ff7`b445cf20 00000000`00000111 000002bc`20961190 : USER32!UserCallDlgProcCheckWow+0x144
+000000e0`3c90f1e0 00007ffb`39b81f66     : 0000b7a3`9743dda8 00000000`000000f3 00000000`00000000 00000000`0006055c : USER32!DefDlgProcWorker+0xd2
+000000e0`3c90f2a0 00007ffb`39b7e7e8     : 00000000`00000001 00000000`00000000 00000000`00000001 00000000`00000000 : USER32!DefDlgProcW+0x36
+000000e0`3c90f2e0 00007ffb`39b7ddab     : 00000000`00000000 00007ffb`3a22cb00 00000000`000400fe 00000000`00000111 : USER32!UserCallWinProcCheckWow+0x2f8
+000000e0`3c90f470 00007ffb`39b7d61a     : 00000000`000400fe 000000e0`00000000 00000000`0000040a 00000000`00000111 : USER32!SendMessageWorker+0x70b
+000000e0`3c90f510 00007ffb`21982467     : 000002bc`253ba1f0 00000000`00000001 00000000`00000001 000002bc`253ba1f0 : USER32!SendMessageW+0xda
+000000e0`3c90f560 00007ffb`219920f0     : 00000000`00000202 000000e0`3c90f659 00000000`00000000 00000000`00000000 : COMCTL32!Button_ReleaseCapture+0xbb
+000000e0`3c90f590 00007ffb`39b7e7e8     : 00000000`000103b8 00000000`00000001 00000000`00000001 00000000`00000000 : COMCTL32!Button_WndProc+0x800
+000000e0`3c90f6c0 00007ffb`39b7e229     : 00000000`00000001 00007ffb`219918f0 00000000`0006055c 00007ffb`00000202 : USER32!UserCallWinProcCheckWow+0x2f8
+000000e0`3c90f850 00007ffb`39b7bfe0     : 00007ffb`219918f0 000002bc`20957a00 000000e0`3c90f9e0 00000000`00000000 : USER32!DispatchMessageWorker+0x249
+000000e0`3c90f8d0 00007ff7`b4473d71     : 00000000`0001035e 00000000`00000001 00000000`80100000 00000000`0001035c : USER32!IsDialogMessageW+0x280
+000000e0`3c90f960 00007ff7`b4479df6     : 00000000`00000000 00000000`00000001 00000000`00000000 00000000`00000000 : FileTest+0x23d71
+000000e0`3c90fc90 00007ffb`38857034     : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : FileTest+0x29df6
+000000e0`3c90fcd0 00007ffb`3a1e2651     : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNEL32!BaseThreadInitThunk+0x14
+000000e0`3c90fd00 00000000`00000000     : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : ntdll!RtlUserThreadStart+0x21</code></pre>
+							
+							<span class="title">Inspect CurrentStacklocation IRP </span>
+							<pre><code class="jsx">2: kd&gt; !irp 0xffffdc0e15e86bd0
+Irp is active with 11 stacks 10 is current (= 0xffffdc0e15e86f28)
+ No Mdl: No System Buffer: Thread ffffdc0e14317080:  Irp stack trace.  
+     cmd  flg cl Device   File     Completion-Context
+[...SNIP...]
+&gt;[IRP_MJ_WRITE(4), N/A(0)]
+            0 e0 ffffdc0e0c7cf030 ffffdc0e166bda30 fffff80162394040-ffffdc0e136bcc70 Success Error Cancel 
+	       \FileSystem\Ntfs	FLTMGR!FltpPassThroughCompletion
+			Args: 00010000 00000000 00000000 00000000
+ [IRP_MJ_WRITE(4), N/A(0)]
+            0  1 ffffdc0e0c73dd70 ffffdc0e166bda30 00000000-00000000    pending
+	       \FileSystem\FltMgr
+			Args: 00010000 00000000 00000000 00000000
+
+Irp Extension present at 0xffffdc0e15e86fb8:</code></pre>
+
+							<span class="title">Inspect the current _IO_STACK_LOCATION</span>
+							<pre><code class="jsx">2: kd&gt; dx -r1 -nv (*((nt!_IO_STACK_LOCATION *)0xffffdc0e15e86f28))
+(*((nt!_IO_STACK_LOCATION *)0xffffdc0e15e86f28))                 : IRP_MJ_WRITE / 0x0 for Device for &quot;\FileSystem\Ntfs&quot; [Type: _IO_STACK_LOCATION]
+    [+0x000] MajorFunction    : 0x4 [Type: unsigned char]
+    [+0x001] MinorFunction    : 0x0 [Type: unsigned char]
+    [+0x002] Flags            : 0x0 [Type: unsigned char]
+    [+0x003] Control          : 0xe0 [Type: unsigned char]
+    [+0x008] Parameters       [Type: &lt;anonymous-tag&gt;]
+    [+0x028] DeviceObject     : 0xffffdc0e0c7cf030 : Device for &quot;\FileSystem\Ntfs&quot; [Type: _DEVICE_OBJECT *]
+    [+0x030] FileObject       : 0xffffdc0e166bda30 : &quot;\Users\devmachine\Desktop\DEMO\DEMO_FILE&quot; - Device for &quot;\FileSystem\Ntfs&quot; [Type: _FILE_OBJECT *]
+    [+0x038] CompletionRoutine : 0xfffff80162394040 : FLTMGR!FltpPassThroughCompletion+0x0 [Type: long (__cdecl*)(_DEVICE_OBJECT *,_IRP *,void *)]
+    [+0x040] Context          : 0xffffdc0e136bcc70 [Type: void *]</code></pre>
+							
+							
+							<br>
+							<span class="title">Inspect IRP based on IRP List from !thread output</span>
+							<pre><code class="jsx">1: kd&gt; !irp ffffdc0e12c68bd0 2
+Irp is active with 11 stacks 10 is current (= 0xffffdc0e12c68f28)
+ No Mdl: No System Buffer: Thread ffffdc0e14317080:  Irp stack trace.  
+Flags = 40060a00
+ThreadListEntry.Flink = ffffdc0e14317530
+ThreadListEntry.Blink = ffffdc0e14317530
+IoStatus.Status = 00000000
+IoStatus.Information = 00000000
+RequestorMode = 00000001
+Cancel = 00
+CancelIrql = 0
+ApcEnvironment = 00
+UserIosb = 2bc25648aa0
+UserEvent = ffffdc0e12ecd5e0
+Overlay.AsynchronousParameters.UserApcRoutine = 00000000
+Overlay.AsynchronousParameters.UserApcContext = 00000000
+Overlay.AllocationSize = 00000000 - 00000000
+CancelRoutine = 00000000   
+UserBuffer = 2bc22420000
+&amp;Tail.Overlay.DeviceQueueEntry = ffffdc0e12c68c48
+Tail.Overlay.Thread = ffffdc0e14317080
+Tail.Overlay.AuxiliaryBuffer = 00000000
+Tail.Overlay.ListEntry.Flink = 00000000
+Tail.Overlay.ListEntry.Blink = 00000000
+Tail.Overlay.CurrentStackLocation = ffffdc0e12c68f28
+Tail.Overlay.OriginalFileObject = ffffdc0e13931440
+Tail.Apc = 00000000
+Tail.CompletionKey = 00000000
+     cmd  flg cl Device   File     Completion-Context
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+ [N/A(0), N/A(0)]
+            0  0 00000000 00000000 00000000-00000000    
+
+			Args: 00000000 00000000 00000000 00000000
+&gt;[IRP_MJ_WRITE(4), N/A(0)]
+            0 e0 ffffdc0e0c7cf030 ffffdc0e13931440 fffff80162394040-ffffdc0e12bf0660 Success Error Cancel 
+	       \FileSystem\Ntfs	FLTMGR!FltpPassThroughCompletion
+			Args: 00010000 00000000 00000000 00000000
+ [IRP_MJ_WRITE(4), N/A(0)]
+            0  1 ffffdc0e0c73dd70 ffffdc0e13931440 00000000-00000000    pending
+	       \FileSystem\FltMgr
+			Args: 00010000 00000000 00000000 00000000
+
+Irp Extension present at 0xffffdc0e12c68fb8:</code></pre>
+							
+							
+							
+
+							<br>
+							<span class="title">Inspecting attributes - buffer to write to file</span>
+							<pre><code class="jsx">1: kd&gt; db 2bc22420000
+000002bc`22420000  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D
+000002bc`22420010  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D
+000002bc`22420020  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D
+000002bc`22420030  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D
+000002bc`22420040  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D
+000002bc`22420050  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D
+000002bc`22420060  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D
+000002bc`22420070  42 41 41 44 46 30 30 44-42 41 41 44 46 30 30 44  BAADF00DBAADF00D</code></pre>
+							
+							
+							<br>
+							<span class="title">Inspecting attributes - CurrentStackLocation</span>
+							<br>
+							<br>
+							<div class="textbox">
+								<div class="textbox-header" onclick="toggleText()">Click to expand</div>
+								<div class="textbox-content">
+																<pre><code class="jsx">1: kd&gt; dt -v -r nt!_IO_STACK_LOCATION ffffdc0e0c96ef28
+struct _IO_STACK_LOCATION, 9 elements, 0x48 bytes
+   +0x000 MajorFunction    : 0x4 &apos;&apos;
+   +0x001 MinorFunction    : 0 &apos;&apos;
+   +0x002 Flags            : 0 &apos;&apos;
+   +0x003 Control          : 0xe0 &apos;&apos;
+   +0x008 Parameters       : union &lt;anonymous-tag&gt;, 39 elements, 0x20 bytes
+      +0x000 Create           : struct &lt;anonymous-tag&gt;, 5 elements, 0x20 bytes
+         +0x000 SecurityContext  : 0x00000000`00010000 struct _IO_SECURITY_CONTEXT, 4 elements, 0x18 bytes
+         +0x008 Options          : 0
+         +0x010 FileAttributes   : 0
+         +0x012 ShareAccess      : 0
+         +0x018 EaLength         : 0
+      +0x000 CreatePipe       : struct &lt;anonymous-tag&gt;, 5 elements, 0x20 bytes
+         +0x000 SecurityContext  : 0x00000000`00010000 struct _IO_SECURITY_CONTEXT, 4 elements, 0x18 bytes
+         +0x008 Options          : 0
+         +0x010 Reserved         : 0
+         +0x012 ShareAccess      : 0
+         +0x018 Parameters       : (null) 
+      +0x000 CreateMailslot   : struct &lt;anonymous-tag&gt;, 5 elements, 0x20 bytes
+         +0x000 SecurityContext  : 0x00000000`00010000 struct _IO_SECURITY_CONTEXT, 4 elements, 0x18 bytes
+         +0x008 Options          : 0
+         +0x010 Reserved         : 0
+         +0x012 ShareAccess      : 0
+         +0x018 Parameters       : (null) 
+      +0x000 Read             : struct &lt;anonymous-tag&gt;, 4 elements, 0x18 bytes
+         +0x000 Length           : 0x10000
+         +0x008 Key              : 0
+         +0x00c Flags            : 0
+         +0x010 ByteOffset       : union _LARGE_INTEGER, 4 elements, 0x8 bytes
+ 0x0
+      +0x000 Write            : struct &lt;anonymous-tag&gt;, 4 elements, 0x18 bytes
+         +0x000 Length           : 0x10000
+         +0x008 Key              : 0
+         +0x00c Flags            : 0
+         +0x010 ByteOffset       : union _LARGE_INTEGER, 4 elements, 0x8 bytes
+ 0x0
+      +0x000 QueryDirectory   : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 Length           : 0x10000
+         +0x008 FileName         : (null) 
+         +0x010 FileInformationClass : Enum _FILE_INFORMATION_CLASS,  76 total enums
+0 (No matching name)
+         +0x018 FileIndex        : 0
+      +0x000 NotifyDirectory  : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 Length           : 0x10000
+         +0x008 CompletionFilter : 0
+      +0x000 NotifyDirectoryEx : struct &lt;anonymous-tag&gt;, 3 elements, 0x18 bytes
+         +0x000 Length           : 0x10000
+         +0x008 CompletionFilter : 0
+         +0x010 DirectoryNotifyInformationClass : Enum _DIRECTORY_NOTIFY_INFORMATION_CLASS,  2 total enums
+0 (No matching name)
+      +0x000 QueryFile        : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 Length           : 0x10000
+         +0x008 FileInformationClass : Enum _FILE_INFORMATION_CLASS,  76 total enums
+0 (No matching name)
+      +0x000 SetFile          : struct &lt;anonymous-tag&gt;, 7 elements, 0x20 bytes
+         +0x000 Length           : 0x10000
+         +0x008 FileInformationClass : Enum _FILE_INFORMATION_CLASS,  76 total enums
+0 (No matching name)
+         +0x010 FileObject       : (null) 
+         +0x018 ReplaceIfExists  : 0 &apos;&apos;
+         +0x019 AdvanceOnly      : 0 &apos;&apos;
+         +0x018 ClusterCount     : 0
+         +0x018 DeleteHandle     : (null) 
+      +0x000 QueryEa          : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 Length           : 0x10000
+         +0x008 EaList           : (null) 
+         +0x010 EaListLength     : 0
+         +0x018 EaIndex          : 0
+      +0x000 SetEa            : struct &lt;anonymous-tag&gt;, 1 elements, 0x4 bytes
+         +0x000 Length           : 0x10000
+      +0x000 QueryVolume      : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 Length           : 0x10000
+         +0x008 FsInformationClass : Enum _FSINFOCLASS,  15 total enums
+0 (No matching name)
+      +0x000 SetVolume        : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 Length           : 0x10000
+         +0x008 FsInformationClass : Enum _FSINFOCLASS,  15 total enums
+0 (No matching name)
+      +0x000 FileSystemControl : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 OutputBufferLength : 0x10000
+         +0x008 InputBufferLength : 0
+         +0x010 FsControlCode    : 0
+         +0x018 Type3InputBuffer : (null) 
+      +0x000 LockControl      : struct &lt;anonymous-tag&gt;, 3 elements, 0x18 bytes
+         +0x000 Length           : 0x00000000`00010000 union _LARGE_INTEGER, 4 elements, 0x8 bytes
+         +0x008 Key              : 0
+         +0x010 ByteOffset       : union _LARGE_INTEGER, 4 elements, 0x8 bytes
+ 0x0
+      +0x000 DeviceIoControl  : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 OutputBufferLength : 0x10000
+         +0x008 InputBufferLength : 0
+         +0x010 IoControlCode    : 0
+         +0x018 Type3InputBuffer : (null) 
+      +0x000 QuerySecurity    : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 SecurityInformation : 0x10000
+         +0x008 Length           : 0
+      +0x000 SetSecurity      : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 SecurityInformation : 0x10000
+         +0x008 SecurityDescriptor : (null) 
+      +0x000 MountVolume      : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 Vpb              : 0x00000000`00010000 struct _VPB, 9 elements, 0x60 bytes
+         +0x008 DeviceObject     : (null) 
+      +0x000 VerifyVolume     : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 Vpb              : 0x00000000`00010000 struct _VPB, 9 elements, 0x60 bytes
+         +0x008 DeviceObject     : (null) 
+      +0x000 Scsi             : struct &lt;anonymous-tag&gt;, 1 elements, 0x8 bytes
+         +0x000 Srb              : 0x00000000`00010000 struct _SCSI_REQUEST_BLOCK, 0 elements, 0x0 bytes
+      +0x000 QueryQuota       : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 Length           : 0x10000
+         +0x008 StartSid         : (null) 
+         +0x010 SidList          : (null) 
+         +0x018 SidListLength    : 0
+      +0x000 SetQuota         : struct &lt;anonymous-tag&gt;, 1 elements, 0x4 bytes
+         +0x000 Length           : 0x10000
+      +0x000 QueryDeviceRelations : struct &lt;anonymous-tag&gt;, 1 elements, 0x4 bytes
+         +0x000 Type             : Enum _DEVICE_RELATION_TYPE,  7 total enums
+0x10000 (No matching name)
+      +0x000 QueryInterface   : struct &lt;anonymous-tag&gt;, 5 elements, 0x20 bytes
+         +0x000 InterfaceType    : 0x00000000`00010000 struct _GUID, 4 elements, 0x10 bytes
+ --- memory read error at address 0x00000000`00010000 ---
+         +0x008 Size             : 0
+         +0x00a Version          : 0
+         +0x010 Interface        : (null) 
+         +0x018 InterfaceSpecificData : (null) 
+      +0x000 DeviceCapabilities : struct &lt;anonymous-tag&gt;, 1 elements, 0x8 bytes
+         +0x000 Capabilities     : 0x00000000`00010000 struct _DEVICE_CAPABILITIES, 34 elements, 0x40 bytes
+      +0x000 FilterResourceRequirements : struct &lt;anonymous-tag&gt;, 1 elements, 0x8 bytes
+         +0x000 IoResourceRequirementList : 0x00000000`00010000 struct _IO_RESOURCE_REQUIREMENTS_LIST, 7 elements, 0x48 bytes
+      +0x000 ReadWriteConfig  : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 WhichSpace       : 0x10000
+         +0x008 Buffer           : (null) 
+         +0x010 Offset           : 0
+         +0x018 Length           : 0
+      +0x000 SetLock          : struct &lt;anonymous-tag&gt;, 1 elements, 0x1 bytes
+         +0x000 Lock             : 0 &apos;&apos;
+      +0x000 QueryId          : struct &lt;anonymous-tag&gt;, 1 elements, 0x4 bytes
+         +0x000 IdType           : Enum BUS_QUERY_ID_TYPE,  6 total enums
+0x10000 (No matching name)
+      +0x000 QueryDeviceText  : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 DeviceTextType   : Enum DEVICE_TEXT_TYPE,  2 total enums
+0x10000 (No matching name)
+         +0x008 LocaleId         : 0
+      +0x000 UsageNotification : struct &lt;anonymous-tag&gt;, 3 elements, 0x10 bytes
+         +0x000 InPath           : 0 &apos;&apos;
+         +0x001 Reserved         : [3]  &quot;&quot;
+         +0x008 Type             : Enum _DEVICE_USAGE_NOTIFICATION_TYPE,  7 total enums
+0 ( DeviceUsageTypeUndefined )
+      +0x000 WaitWake         : struct &lt;anonymous-tag&gt;, 1 elements, 0x4 bytes
+         +0x000 PowerState       : Enum _SYSTEM_POWER_STATE,  8 total enums
+0x10000 (No matching name)
+      +0x000 PowerSequence    : struct &lt;anonymous-tag&gt;, 1 elements, 0x8 bytes
+         +0x000 PowerSequence    : 0x00000000`00010000 struct _POWER_SEQUENCE, 3 elements, 0xc bytes
+      +0x000 Power            : struct &lt;anonymous-tag&gt;, 5 elements, 0x20 bytes
+         +0x000 SystemContext    : 0x10000
+         +0x000 SystemPowerStateContext : struct _SYSTEM_POWER_STATE_CONTEXT, 10 elements, 0x4 bytes
+         +0x008 Type             : Enum _POWER_STATE_TYPE,  2 total enums
+0 ( SystemPowerState )
+         +0x010 State            : union _POWER_STATE, 2 elements, 0x4 bytes
+         +0x018 ShutdownType     : Enum POWER_ACTION,  9 total enums
+0 ( PowerActionNone )
+      +0x000 StartDevice      : struct &lt;anonymous-tag&gt;, 2 elements, 0x10 bytes
+         +0x000 AllocatedResources : 0x00000000`00010000 struct _CM_RESOURCE_LIST, 2 elements, 0x28 bytes
+         +0x008 AllocatedResourcesTranslated : (null) 
+      +0x000 WMI              : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 ProviderId       : 0x10000
+         +0x008 DataPath         : (null) 
+         +0x010 BufferSize       : 0
+         +0x018 Buffer           : (null) 
+      +0x000 Others           : struct &lt;anonymous-tag&gt;, 4 elements, 0x20 bytes
+         +0x000 Argument1        : 0x00000000`00010000 Void
+         +0x008 Argument2        : (null) 
+         +0x010 Argument3        : (null) 
+         +0x018 Argument4        : (null) 
+   +0x028 DeviceObject     : 0xffffdc0e`0c7cf030 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+      +0x000 Type             : 0n3
+      +0x002 Size             : 0x2b20
+      +0x004 ReferenceCount   : 0n0
+      +0x008 DriverObject     : 0xffffdc0e`0c405c60 struct _DRIVER_OBJECT, 15 elements, 0x150 bytes
+         +0x000 Type             : 0n4
+         +0x002 Size             : 0n336
+         +0x008 DeviceObject     : 0xffffdc0e`0f898030 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x010 Flags            : 0x92
+         +0x018 DriverStart      : 0xfffff801`63000000 Void
+         +0x020 DriverSize       : 0x2d8000
+         +0x028 DriverSection    : 0xffffdc0e`0a08b5a0 Void
+         +0x030 DriverExtension  : 0xffffdc0e`0c405db0 struct _DRIVER_EXTENSION, 9 elements, 0x50 bytes
+         +0x038 DriverName       : struct _UNICODE_STRING, 3 elements, 0x10 bytes
+ &quot;\FileSystem\Ntfs&quot;
+         +0x048 HardwareDatabase : 0xfffff801`61d33988 struct _UNICODE_STRING, 3 elements, 0x10 bytes
+ &quot;\REGISTRY\MACHINE\HARDWARE\DESCRIPTION\SYSTEM&quot;
+         +0x050 FastIoDispatch   : 0xfffff801`63094a20 struct _FAST_IO_DISPATCH, 28 elements, 0xe0 bytes
+         +0x058 DriverInit       : 0xfffff801`63293010           long  Ntfs!GsDriverEntry+0
+         +0x060 DriverStartIo    : (null) 
+         +0x068 DriverUnload     : (null) 
+         +0x070 MajorFunction    : [28] 0xfffff801`630e6460           long  Ntfs!NtfsFsdCreate+0
+      +0x010 NextDevice       : 0xffffdc0e`0c406970 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x000 Type             : 0n3
+         +0x002 Size             : 0x150
+         +0x004 ReferenceCount   : 0n1
+         +0x008 DriverObject     : 0xffffdc0e`0c405c60 struct _DRIVER_OBJECT, 15 elements, 0x150 bytes
+         +0x010 NextDevice       : (null) 
+         +0x018 AttachedDevice   : 0xffffdc0e`0c587bd0 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x020 CurrentIrp       : (null) 
+         +0x028 Timer            : (null) 
+         +0x030 Flags            : 0x8000040
+         +0x034 Characteristics  : 0
+         +0x038 Vpb              : (null) 
+         +0x040 DeviceExtension  : (null) 
+         +0x048 DeviceType       : 8
+         +0x04c StackSize        : 10 &apos;&apos;
+         +0x050 Queue            : union &lt;anonymous-tag&gt;, 2 elements, 0x48 bytes
+         +0x098 AlignmentRequirement : 0
+         +0x0a0 DeviceQueue      : struct _KDEVICE_QUEUE, 7 elements, 0x28 bytes
+         +0x0c8 Dpc              : struct _KDPC, 11 elements, 0x40 bytes
+         +0x108 ActiveThreadCount : 0
+         +0x110 SecurityDescriptor : 0xffff9b0d`e6bef5e0 Void
+         +0x118 DeviceLock       : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x130 SectorSize       : 0x200
+         +0x132 Spare1           : 1
+         +0x138 DeviceObjectExtension : 0xffffdc0e`0c406ac0 struct _DEVOBJ_EXTENSION, 16 elements, 0x70 bytes
+         +0x140 Reserved         : (null) 
+      +0x018 AttachedDevice   : 0xffffdc0e`0c73dd70 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x000 Type             : 0n3
+         +0x002 Size             : 0x1a8
+         +0x004 ReferenceCount   : 0n0
+         +0x008 DriverObject     : 0xffffdc0e`0c57fbc0 struct _DRIVER_OBJECT, 15 elements, 0x150 bytes
+         +0x010 NextDevice       : 0xffffdc0e`0c73d8d0 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x018 AttachedDevice   : (null) 
+         +0x020 CurrentIrp       : (null) 
+         +0x028 Timer            : (null) 
+         +0x030 Flags            : 0x8040000
+         +0x034 Characteristics  : 0
+         +0x038 Vpb              : (null) 
+         +0x040 DeviceExtension  : 0xffffdc0e`0c73dec0 Void
+         +0x048 DeviceType       : 8
+         +0x04c StackSize        : 11 &apos;&apos;
+         +0x050 Queue            : union &lt;anonymous-tag&gt;, 2 elements, 0x48 bytes
+         +0x098 AlignmentRequirement : 3
+         +0x0a0 DeviceQueue      : struct _KDEVICE_QUEUE, 7 elements, 0x28 bytes
+         +0x0c8 Dpc              : struct _KDPC, 11 elements, 0x40 bytes
+         +0x108 ActiveThreadCount : 0
+         +0x110 SecurityDescriptor : 0xffff9b0d`e6bef5e0 Void
+         +0x118 DeviceLock       : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x130 SectorSize       : 0x200
+         +0x132 Spare1           : 0
+         +0x138 DeviceObjectExtension : 0xffffdc0e`0c73df18 struct _DEVOBJ_EXTENSION, 16 elements, 0x70 bytes
+         +0x140 Reserved         : (null) 
+      +0x020 CurrentIrp       : (null) 
+      +0x028 Timer            : (null) 
+      +0x030 Flags            : 0x8060000
+      +0x034 Characteristics  : 0
+      +0x038 Vpb              : (null) 
+      +0x040 DeviceExtension  : 0xffffdc0e`0c7cf180 Void
+      +0x048 DeviceType       : 8
+      +0x04c StackSize        : 10 &apos;&apos;
+      +0x050 Queue            : union &lt;anonymous-tag&gt;, 2 elements, 0x48 bytes
+         +0x000 ListEntry        : struct _LIST_ENTRY, 2 elements, 0x10 bytes
+ [ 0xffffdc0e`0c7cf080 - 0xffffdc0e`0c7cf080 ]
+         +0x000 Wcb              : struct _WAIT_CONTEXT_BLOCK, 14 elements, 0x48 bytes
+      +0x098 AlignmentRequirement : 3
+      +0x0a0 DeviceQueue      : struct _KDEVICE_QUEUE, 7 elements, 0x28 bytes
+         +0x000 Type             : 0n0
+         +0x002 Size             : 0n0
+         +0x008 DeviceListHead   : struct _LIST_ENTRY, 2 elements, 0x10 bytes
+ [ 0x00000000`00000000 - 0x00000000`00000000 ]
+         +0x018 Lock             : 0
+         +0x020 Busy             : 0 &apos;&apos;
+         +0x020 Reserved         : Bitfield 0y00000000 (0)
+         +0x020 Hint             : Bitfield 0y00000000000000000000000000000000000000000000000000000000 (0)
+      +0x0c8 Dpc              : struct _KDPC, 11 elements, 0x40 bytes
+         +0x000 TargetInfoAsUlong : 0
+         +0x000 Type             : 0 &apos;&apos;
+         +0x001 Importance       : 0 &apos;&apos;
+         +0x002 Number           : 0
+         +0x008 DpcListEntry     : struct _SINGLE_LIST_ENTRY, 1 elements, 0x8 bytes
+         +0x010 ProcessorHistory : 0
+         +0x018 DeferredRoutine  : (null) 
+         +0x020 DeferredContext  : (null) 
+         +0x028 SystemArgument1  : (null) 
+         +0x030 SystemArgument2  : (null) 
+         +0x038 DpcData          : (null) 
+      +0x108 ActiveThreadCount : 0
+      +0x110 SecurityDescriptor : 0xffff9b0d`e6bef5e0 Void
+      +0x118 DeviceLock       : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x000 Header           : struct _DISPATCHER_HEADER, 59 elements, 0x18 bytes
+      +0x130 SectorSize       : 0x200
+      +0x132 Spare1           : 1
+      +0x138 DeviceObjectExtension : 0xffffdc0e`0c7d1b50 struct _DEVOBJ_EXTENSION, 16 elements, 0x70 bytes
+         +0x000 Type             : 0n13
+         +0x002 Size             : 0
+         +0x008 DeviceObject     : 0xffffdc0e`0c7cf030 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x010 PowerFlags       : 0
+         +0x018 Dope             : (null) 
+         +0x020 ExtensionFlags   : 0x80000800
+         +0x028 DeviceNode       : (null) 
+         +0x030 AttachedTo       : (null) 
+         +0x038 StartIoCount     : 0n0
+         +0x03c StartIoKey       : 0n0
+         +0x040 StartIoFlags     : 0
+         +0x048 Vpb              : 0xffffdc0e`0c7613a0 struct _VPB, 9 elements, 0x60 bytes
+         +0x050 DependencyNode   : (null) 
+         +0x058 InterruptContext : (null) 
+         +0x060 InterruptCount   : 0n0
+         +0x068 VerifierContext  : (null) 
+      +0x140 Reserved         : (null) 
+   +0x030 FileObject       : 0xffffdc0e`14a33960 struct _FILE_OBJECT, 30 elements, 0xd8 bytes
+      +0x000 Type             : 0n5
+      +0x002 Size             : 0n216
+      +0x008 DeviceObject     : 0xffffdc0e`0c7b8460 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x000 Type             : 0n3
+         +0x002 Size             : 0x318
+         +0x004 ReferenceCount   : 0n11240
+         +0x008 DriverObject     : 0xffffdc0e`0c510dc0 struct _DRIVER_OBJECT, 15 elements, 0x150 bytes
+         +0x010 NextDevice       : 0xffffdc0e`0c7b8060 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x018 AttachedDevice   : 0xffffdc0e`0c7c9030 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x020 CurrentIrp       : (null) 
+         +0x028 Timer            : (null) 
+         +0x030 Flags            : 0x1150
+         +0x034 Characteristics  : 0x60000
+         +0x038 Vpb              : 0xffffdc0e`0c7613a0 struct _VPB, 9 elements, 0x60 bytes
+         +0x040 DeviceExtension  : 0xffffdc0e`0c7b85b0 Void
+         +0x048 DeviceType       : 7
+         +0x04c StackSize        : 5 &apos;&apos;
+         +0x050 Queue            : union &lt;anonymous-tag&gt;, 2 elements, 0x48 bytes
+         +0x098 AlignmentRequirement : 3
+         +0x0a0 DeviceQueue      : struct _KDEVICE_QUEUE, 7 elements, 0x28 bytes
+         +0x0c8 Dpc              : struct _KDPC, 11 elements, 0x40 bytes
+         +0x108 ActiveThreadCount : 0
+         +0x110 SecurityDescriptor : 0xffff9b0d`e6bef5e0 Void
+         +0x118 DeviceLock       : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x130 SectorSize       : 0x200
+         +0x132 Spare1           : 1
+         +0x138 DeviceObjectExtension : 0xffffdc0e`0c7b8778 struct _DEVOBJ_EXTENSION, 16 elements, 0x70 bytes
+         +0x140 Reserved         : (null) 
+      +0x010 Vpb              : 0xffffdc0e`0c7613a0 struct _VPB, 9 elements, 0x60 bytes
+         +0x000 Type             : 0n10
+         +0x002 Size             : 0n96
+         +0x004 Flags            : 1
+         +0x006 VolumeLabelLength : 0
+         +0x008 DeviceObject     : 0xffffdc0e`0c7cf030 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x010 RealDevice       : 0xffffdc0e`0c7b8460 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x018 SerialNumber     : 0xfcd7541e
+         +0x01c ReferenceCount   : 0x2be8
+         +0x020 VolumeLabel      : [32]  &quot;&quot;
+      +0x018 FsContext        : 0xffff9b0d`f4d0f170 Void
+      +0x020 FsContext2       : 0xffff9b0d`f4d0f3e0 Void
+      +0x028 SectionObjectPointer : 0xffffdc0e`173407d8 struct _SECTION_OBJECT_POINTERS, 3 elements, 0x18 bytes
+         +0x000 DataSectionObject : (null) 
+         +0x008 SharedCacheMap   : (null) 
+         +0x010 ImageSectionObject : (null) 
+      +0x030 PrivateCacheMap  : (null) 
+      +0x038 FinalStatus      : 0n0
+      +0x040 RelatedFileObject : 0xffffdc0e`14a2f790 struct _FILE_OBJECT, 30 elements, 0xd8 bytes
+         +0x000 Type             : 0n5
+         +0x002 Size             : 0n216
+         +0x008 DeviceObject     : 0xffffdc0e`0c7b8460 struct _DEVICE_OBJECT, 25 elements, 0x150 bytes
+         +0x010 Vpb              : 0xffffdc0e`0c7613a0 struct _VPB, 9 elements, 0x60 bytes
+         +0x018 FsContext        : 0xffff9b0d`ed195170 Void
+         +0x020 FsContext2       : 0xffff9b0d`ef328f00 Void
+         +0x028 SectionObjectPointer : (null) 
+         +0x030 PrivateCacheMap  : (null) 
+         +0x038 FinalStatus      : 0n0
+         +0x040 RelatedFileObject : (null) 
+         +0x048 LockOperation    : 0 &apos;&apos;
+         +0x049 DeletePending    : 0 &apos;&apos;
+         +0x04a ReadAccess       : 0x1 &apos;&apos;
+         +0x04b WriteAccess      : 0 &apos;&apos;
+         +0x04c DeleteAccess     : 0 &apos;&apos;
+         +0x04d SharedRead       : 0x1 &apos;&apos;
+         +0x04e SharedWrite      : 0x1 &apos;&apos;
+         +0x04f SharedDelete     : 0 &apos;&apos;
+         +0x050 Flags            : 0x40000
+         +0x058 FileName         : struct _UNICODE_STRING, 3 elements, 0x10 bytes
+ &quot;\Users\devmachine\Desktop\DEMO&quot;
+         +0x068 CurrentByteOffset : union _LARGE_INTEGER, 4 elements, 0x8 bytes
+ 0x0
+         +0x070 Waiters          : 0
+         +0x074 Busy             : 0
+         +0x078 LastLock         : (null) 
+         +0x080 Lock             : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x098 Event            : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x0b0 CompletionContext : (null) 
+         +0x0b8 IrpListLock      : 0
+         +0x0c0 IrpList          : struct _LIST_ENTRY, 2 elements, 0x10 bytes
+ [ 0xffffdc0e`14a2f850 - 0xffffdc0e`14a2f850 ]
+         +0x0d0 FileObjectExtension : (null) 
+      +0x048 LockOperation    : 0 &apos;&apos;
+      +0x049 DeletePending    : 0 &apos;&apos;
+      +0x04a ReadAccess       : 0x1 &apos;&apos;
+      +0x04b WriteAccess      : 0x1 &apos;&apos;
+      +0x04c DeleteAccess     : 0x1 &apos;&apos;
+      +0x04d SharedRead       : 0x1 &apos;&apos;
+      +0x04e SharedWrite      : 0x1 &apos;&apos;
+      +0x04f SharedDelete     : 0x1 &apos;&apos;
+      +0x050 Flags            : 0x40042
+      +0x058 FileName         : struct _UNICODE_STRING, 3 elements, 0x10 bytes
+ &quot;\Users\devmachine\Desktop\DEMO\DEMO_FILE&quot;
+         +0x000 Length           : 0x50
+         +0x002 MaximumLength    : 0x50
+         +0x008 Buffer           : 0xffff9b0d`eea75ea0  &quot;\Users\devmachine\Desktop\DEMO\DEMO_FILE&quot;
+      +0x068 CurrentByteOffset : union _LARGE_INTEGER, 4 elements, 0x8 bytes
+ 0x0
+         +0x000 LowPart          : 0
+         +0x004 HighPart         : 0n0
+         +0x000 u                : struct &lt;anonymous-tag&gt;, 2 elements, 0x8 bytes
+         +0x000 QuadPart         : 0n0
+      +0x070 Waiters          : 0
+      +0x074 Busy             : 1
+      +0x078 LastLock         : (null) 
+      +0x080 Lock             : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x000 Header           : struct _DISPATCHER_HEADER, 59 elements, 0x18 bytes
+      +0x098 Event            : struct _KEVENT, 1 elements, 0x18 bytes
+         +0x000 Header           : struct _DISPATCHER_HEADER, 59 elements, 0x18 bytes
+      +0x0b0 CompletionContext : (null) 
+      +0x0b8 IrpListLock      : 0
+      +0x0c0 IrpList          : struct _LIST_ENTRY, 2 elements, 0x10 bytes
+ [ 0xffffdc0e`14a33a20 - 0xffffdc0e`14a33a20 ]
+         +0x000 Flink            : 0xffffdc0e`14a33a20 struct _LIST_ENTRY, 2 elements, 0x10 bytes
+ [ 0xffffdc0e`14a33a20 - 0xffffdc0e`14a33a20 ]
+         +0x008 Blink            : 0xffffdc0e`14a33a20 struct _LIST_ENTRY, 2 elements, 0x10 bytes
+ [ 0xffffdc0e`14a33a20 - 0xffffdc0e`14a33a20 ]
+      +0x0d0 FileObjectExtension : (null) 
+   +0x038 CompletionRoutine : 0xfffff801`62394040     long  FLTMGR!FltpPassThroughCompletion+0
+   +0x040 Context          : 0xffffdc0e`10bcccc0 Void</code></pre>
+							</div>
+							</div>
+							
+							
+							<br>
+							<br>
+							<span class="title">Inspecting attributes - OriginalFileObject</span>
+							<pre><code class="jsx">1: kd&gt; !fileobj ffffdc0e14a33960
+
+\Users\devmachine\Desktop\DEMO\DEMO_FILE
+
+Related File Object: 0xffffdc0e14a2f790
+
+Device Object: 0xffffdc0e0c7b8460   \Driver\volmgr
+Vpb: 0xffffdc0e0c7613a0
+Access: Read Write Delete SharedRead SharedWrite SharedDelete 
+
+Flags:  0x40042
+	Synchronous IO
+	Cache Supported
+	Handle Created
+
+File Object is currently busy and has 0 waiters.
+
+FsContext: 0xffff9b0df4d0f170	FsContext2: 0xffff9b0df4d0f3e0
+CurrentByteOffset: 0
+Cache Data:
+  Section Object Pointers: ffffdc0e173407d8
+  Shared Cache Map: 00000000</code></pre>
+							
+							
+							
+							
+							
+							
+							
+							
+							
+							
+							
+							<br>
+							<br>
+							<br>
+							<span class="title">Yarden method -- Identify process container</span>
+							<pre><code class="jsx">2: kd&gt; dx @$filetest = @$cursession.Processes.Where(p =&gt; p.Name == &quot;FileTest.exe&quot;).First()
+@$filetest = @$cursession.Processes.Where(p =&gt; p.Name == &quot;FileTest.exe&quot;).First()                 : FileTest.exe [Switch To]
+    KernelObject     [Type: _EPROCESS]
+    Name             : FileTest.exe
+    Id               : 0x6bc
+    Handle           : 0xf0f0f0f0
+    Threads         
+    Modules         
+    Environment     
+    Devices         
+    Io</code></pre>
+
+
+							<br>
+							<span class="title">Yarden method -- Iterate over IrpList for each thread in the process and get IRPs, 4 levels of depth and 5 levels respectively</span>
+							<pre><code class="jsx">2: kd&gt; dx -r4 @$irpThreads = @$filetest.Threads.Select(t =&gt; new {irp = Debugger.Utility.Collections.FromListEntry(t.KernelObject.IrpList, &quot;nt!_IRP&quot;, &quot;ThreadListEntry&quot;)}).Where(t =&gt; t.irp.Count() != 0)
+@$irpThreads = @$filetest.Threads.Select(t =&gt; new {irp = Debugger.Utility.Collections.FromListEntry(t.KernelObject.IrpList, &quot;nt!_IRP&quot;, &quot;ThreadListEntry&quot;)}).Where(t =&gt; t.irp.Count() != 0)                
+    [0x6c8]         
+        irp             
+            [0x0]            [Type: _IRP]
+                [&lt;Raw View&gt;]     [Type: _IRP]
+                IoStack          : Size = 11, Current IRP_MJ_WRITE / 0x0 for Device for &quot;\FileSystem\Ntfs&quot;
+                CurrentStackLocation : 0xffffdc0e15e86f28 : IRP_MJ_WRITE / 0x0 for Device for &quot;\FileSystem\Ntfs&quot; [Type: _IO_STACK_LOCATION *]
+                CurrentThread    : 0xffffdc0e14317080 [Type: _ETHREAD *]
+
+2: kd&gt; dx -r5 @$irpThreads = @$filetest.Threads.Select(t =&gt; new {irp = Debugger.Utility.Collections.FromListEntry(t.KernelObject.IrpList, &quot;nt!_IRP&quot;, &quot;ThreadListEntry&quot;)}).Where(t =&gt; t.irp.Count() != 0)
+@$irpThreads = @$filetest.Threads.Select(t =&gt; new {irp = Debugger.Utility.Collections.FromListEntry(t.KernelObject.IrpList, &quot;nt!_IRP&quot;, &quot;ThreadListEntry&quot;)}).Where(t =&gt; t.irp.Count() != 0)                
+    [0x6c8]         
+        irp             
+            [0x0]            [Type: _IRP]
+                [&lt;Raw View&gt;]     [Type: _IRP]
+                IoStack          : Size = 11, Current IRP_MJ_WRITE / 0x0 for Device for &quot;\FileSystem\Ntfs&quot;
+[...SNIP...]
+                    [9]              : IRP_MJ_WRITE / 0x0 for Device for &quot;\FileSystem\Ntfs&quot; [Type: _IO_STACK_LOCATION]
+                    [10]             : IRP_MJ_WRITE / 0x0 for Device for &quot;\FileSystem\FltMgr&quot; [Type: _IO_STACK_LOCATION]
+                CurrentStackLocation : 0xffffdc0e15e86f28 : IRP_MJ_WRITE / 0x0 for Device for &quot;\FileSystem\Ntfs&quot; [Type: _IO_STACK_LOCATION *]
+                    [&lt;Raw View&gt;]     [Type: _IO_STACK_LOCATION]
+                    Device           : 0xffffdc0e0c7cf030 : Device for &quot;\FileSystem\Ntfs&quot; [Type: _DEVICE_OBJECT *]
+                    File             : 0xffffdc0e166bda30 : &quot;\Users\devmachine\Desktop\DEMO\DEMO_FILE&quot; - Device for &quot;\FileSystem\Ntfs&quot; [Type: _FILE_OBJECT *]
+                    CompletionRoutine : 0xfffff80162394040 : FLTMGR!FltpPassThroughCompletion+0x0 [Type: long (__cdecl*)(_DEVICE_OBJECT *,_IRP *,void *)]
+                CurrentThread    : 0xffffdc0e14317080 [Type: _ETHREAD *]
+                    [+0x000] Tcb              [Type: _KTHREAD]
+[...SNIP...]</code></pre>
+
+
+
+
+<br>
+							<span class="title">Yarden method -- Inspect CurrentStacklocation IRP </span>
+							<pre><code class="jsx">1: kd&gt; dx -r3 @$irpThreads.Select(t =&gt; t.irp.Select(i =&gt; Debugger.Utility.Control.ExecuteCommand(&quot;!irp &quot; + ((__int64)&amp;i).ToDisplayString(&quot;x&quot;))))
+@$irpThreads.Select(t =&gt; t.irp.Select(i =&gt; Debugger.Utility.Control.ExecuteCommand(&quot;!irp &quot; + ((__int64)&amp;i).ToDisplayString(&quot;x&quot;))))                
+    [0x6c8]         
+        [0x0]           
+            [0x0]            : Irp is active with 11 stacks 10 is current (= 0xffffdc0e0c96ef28)
+            [0x1]            :  No Mdl: No System Buffer: Thread ffffdc0e14317080:  Irp stack trace.  
+            [0x2]            :      cmd  flg cl Device   File     Completion-Context
+[...SNIP...]
+            [0x26]           : ...Args: 00000000 00000000 00000000 00000000
+            [0x27]           : &gt;[IRP_MJ_WRITE(4), N/A(0)]
+            [0x28]           :             0 e0 ffffdc0e0c7cf030 ffffdc0e14a33960 fffff80162394040-ffffdc0e10bcccc0 Success Error Cancel 
+            [0x29]           : .       \FileSystem\Ntfs.FLTMGR!FltpPassThroughCompletion
+            [0x2a]           : ...Args: 00010000 00000000 00000000 00000000
+            [0x2b]           :  [IRP_MJ_WRITE(4), N/A(0)]
+            [0x2c]           :             0  1 ffffdc0e0c73dd70 ffffdc0e14a33960 00000000-00000000    pending
+            [0x2d]           : .       \FileSystem\FltMgr
+            [0x2e]           : ...Args: 00010000 00000000 00000000 00000000
+            [0x2f]          
+            [0x30]           : Irp Extension present at 0xffffdc0e0c96efb8:</code></pre>
+
+
+
+
+							
+							
+							<br>
+							<span class="title">I wanted to say thanks to a couple of people:</span>
+							<p>
+							<ul>
+							<li>
+							
+							<a href="https://twitter.com/yarden_shafir">Yardin</a> for her "windbg the fun way" blogs which allows me to use the commands shown <a href="https://github.com/yardenshafir/WinDbg_Scripts/blob/master/printIrpsForLsass.txt">here</a> and for answering my discord DMs despite me resolving the issue I was experiencing mid way through sending messages.
+							</li>
+							
+							<li>
+							<a href="https://twitter.com/daax_rynd">Daax</a> for giving insight into how he tracks IRPs and for helping with some conditional WinDbg breakpointing problems I was experiencing.
+							</li>
+							</ul>
+							</p>
+							
+							
+							<tr><td><span class="title">Resources</span>
+								<ul>
+									<li><a href="https://www.microsoftpressstore.com/articles/article.aspx?p=2201309&seqNum=3">Microsoft -- Understanding the Windows I/O System</a></li>
+									<li><a href="https://www.vergiliusproject.com/kernels/x64/Windows%2010%20|%202016/2104%2021H1%20(May%202021%20Update)/_IRP">vergiliusproject -- _IRP Structure</a></li>
+									<li><a href="https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_irp">MSDN -- _IRP Structure</a></li>
+									
+									
+									
+									
+									<li><a href="https://medium.com/@yardenshafir2/windbg-the-fun-way-part-1-2e4978791f9b">Yarden Shafir -- WinDbg the fun way part 1</a>, <a href="https://medium.com/@yardenshafir2/windbg-the-fun-way-part-2-7a904cba5435">WinDbg the fun way part 2</a></li>
+									<li><a href="http://www.zezula.net/en/fstools/filetest.html">zezula -- FileTest</a></li>
+									<li><a href="https://github.com/ladislav-zezula/FileTest">zezula -- FileTest source</a></li>
+									<li><a href="https://bsodtutorials.wordpress.com/2021/06/13/an-introduction-to-irps-and-device-stacks/">0x14c -- An Introduction to IRPs and Device Stacks</a></li>
+									<li><a href="https://shreklane.github.io/winkrnldocs/d0/d2/struct__IRP.html">shreklane -- Windows NT Kernel Documentation from 2004</a></li>
+									
+								</ul>
+							</td></tr>
+							
+							
+							
+							</table>
+							</div>
+							<div class="footer" onclick="document.getElementById('profile_link').click();">
+								<a id="profile_link" target="_blank" href="https://github.com/p4yl0ad">Github</a>
+							</div>
+						</div>
+					</body>
+				</html>																		
