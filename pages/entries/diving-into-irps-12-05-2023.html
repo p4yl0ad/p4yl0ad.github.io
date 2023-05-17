@@ -593,6 +593,40 @@ File system drivers use this field, which is read-only for all drivers. Network 
 							</div>
 
 
+<pre><code class="jsx">                                        +---------------------+
++---------+  +---------------------+  +>|  MasterIrp          |
+|   MDL   |<-+     MdlAddress      |  | +---------------------+
++---------+  +---------------------+  |
+             |   AssociatedIrp     +--+ +---------------------+
+             +---------------------+  |>|  IrpCount           |
+             |Current I/O StackLoc |  | +---------------------+
+             +---------------------+  |
+             | I/O Stack Loc Count |  | +---------------------+
+             +---------------------+  +>| SystemBuffer        |
+             |       IoStatus      +-+  +---------------------+
+             +---------------------+ |
+             |      UserEvent      | |
+             +---------------------+ |  +---------------------+
+             |      UserBuffer     | +->|   Status            |
+             +---------------------+    +---------------------+
+             |    Cancel Routine   |    |   Information       |
+             +---------------------+    +---------------------+
+             |  IO_STACK_LOCATION  |
+             +---------------------+
+             |  IO_STACK_LOCATION  |
+             +---------------------+
+
+             +---------------------+
+             |  IO_STACK_LOCATION  |
+             +---------------------+</code></pre>
+
+
+
+
+
+
+
+
 							<br>
 							<br>
 							<span class="title">ntfs!NtfsFsdWrite breakpoint to catch IRP_MJ_WRITE</span>
