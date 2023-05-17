@@ -592,7 +592,7 @@ File system drivers use this field, which is read-only for all drivers. Network 
 							</div>
 							</div>
 
-
+<span class="title">Pavel - Important fields in an IRP</span>
 <pre><code class="jsx">                                        +---------------------+
 +---------+  +---------------------+  +>|  MasterIrp          |
 |   MDL   |<-+     MdlAddress      |  | +---------------------+
@@ -619,6 +619,32 @@ File system drivers use this field, which is read-only for all drivers. Network 
              +---------------------+
              |  IO_STACK_LOCATION  |
              +---------------------+</code></pre>
+
+<span class="title">Pavel - Important fields in the IO_STACK_LOCATION structure</span>
+<pre><code class="jsx">                                  +---------------------+
+                               +->|        Create       |
+       +----------+----------+ |  +---------------------+
+       |  MJ Func | Min Func | |
+       +----------+----------+ |  +---------------------+
+       |                     | +->|        Read         |
+       |                     | |  +---------------------+
+       |                     | |
+       |      Parameters     +-+  +---------------------+
+       |                     | +->|        Write        |
+       |                     | |  +---------------------+
+       |                     | |
+       +---------------------+ |  +---------------------+
+       |     File Object     | +->|   DeviceIoControl   |
+       +---------------------+ |  +---------------------+
+       |    Device Object    | |
+       +---------------------+ |  +---------------------+
+       |  CompletionRoutine  | +->|        Power        |
+       +---------------------+ |  +---------------------+
+       |       Context       | |
+       +---------------------+ |  +---------------------+
+                               +->|     StartDevice     |
+                                  +---------------------+</code></pre>
+
 
 
 
