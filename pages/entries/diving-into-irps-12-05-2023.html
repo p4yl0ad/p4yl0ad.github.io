@@ -594,20 +594,20 @@ File system drivers use this field, which is read-only for all drivers. Network 
 
 <span class="title">Pavel - Important fields in an IRP</span>
 <pre><code class="jsx">                                        +---------------------+
-+---------+  +---------------------+  +>|  MasterIrp          |
-|   MDL   |<-+     MdlAddress      |  | +---------------------+
++---------+  +---------------------+  +&gt;|  MasterIrp          |
+|   MDL   |&lt;-+     MdlAddress      |  | +---------------------+
 +---------+  +---------------------+  |
              |   AssociatedIrp     +--+ +---------------------+
-             +---------------------+  |>|  IrpCount           |
+             +---------------------+  |&gt;|  IrpCount           |
              |Current I/O StackLoc |  | +---------------------+
              +---------------------+  |
              | I/O Stack Loc Count |  | +---------------------+
-             +---------------------+  +>| SystemBuffer        |
+             +---------------------+  +&gt;| SystemBuffer        |
              |       IoStatus      +-+  +---------------------+
              +---------------------+ |
              |      UserEvent      | |
              +---------------------+ |  +---------------------+
-             |      UserBuffer     | +->|   Status            |
+             |      UserBuffer     | +-&gt;|   Status            |
              +---------------------+    +---------------------+
              |    Cancel Routine   |    |   Information       |
              +---------------------+    +---------------------+
@@ -622,33 +622,28 @@ File system drivers use this field, which is read-only for all drivers. Network 
 
 <span class="title">Pavel - Important fields in the IO_STACK_LOCATION structure</span>
 <pre><code class="jsx">                                  +---------------------+
-                               +->|        Create       |
+                               +-&gt;|        Create       |
        +----------+----------+ |  +---------------------+
        |  MJ Func | Min Func | |
        +----------+----------+ |  +---------------------+
-       |                     | +->|        Read         |
+       |                     | +-&gt;|        Read         |
        |                     | |  +---------------------+
        |                     | |
        |      Parameters     +-+  +---------------------+
-       |                     | +->|        Write        |
+       |                     | +-&gt;|        Write        |
        |                     | |  +---------------------+
        |                     | |
        +---------------------+ |  +---------------------+
-       |     File Object     | +->|   DeviceIoControl   |
+       |     File Object     | +-&gt;|   DeviceIoControl   |
        +---------------------+ |  +---------------------+
        |    Device Object    | |
        +---------------------+ |  +---------------------+
-       |  CompletionRoutine  | +->|        Power        |
+       |  CompletionRoutine  | +-&gt;|        Power        |
        +---------------------+ |  +---------------------+
        |       Context       | |
        +---------------------+ |  +---------------------+
-                               +->|     StartDevice     |
+                               +-&gt;|     StartDevice     |
                                   +---------------------+</code></pre>
-
-
-
-
-
 
 
 
